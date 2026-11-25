@@ -1,6 +1,6 @@
 """Peluncur lokal lintas platform. Menjalankan satu node, satu kontrak, dan satu server."""
 
-import argparse, json, os, shutil, socket, subprocess, sys, time, webbrowser
+import argparse, json, os, shutil, socket, subprocess, sys, time
 from pathlib import Path
 import ledger
 
@@ -21,7 +21,8 @@ def main():
     parser.add_argument(
         "--test", action="store_true", help="Uji integrasi di folder data sementara"
     )
-    parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--port", type=int, default=8000, help="Port HTTP dashboard (default 8000)")
+    parser.add_argument("--no-browser", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.test:
         import tempfile
@@ -40,8 +41,11 @@ def main():
     cli = BASE / "node_modules/hardhat/internal/cli/cli.js"
     if not cli.exists():
         raise RuntimeError("Jalankan npm ci di folder proyek.")
-    if not args.test and port_open(8000):
-        raise RuntimeError("Port 8000 sedang dipakai.")
+    if not 1 <= args.port <= 65535 or args.port == 8545:
+        raise RuntimeError("Pilih port HTTP 1-65535 selain 8545 (Hardhat).")
+    if not args.test and port_open(args.port):
+        raise RuntimeError(f"Port {args.port} sedang dipakai. Coba start.py --port {8001 if args.port != 8001 else 8002}.")
+    print("Memeriksa node blockchain lokal di port 8545 ...", flush=True)
     child = None
     logfile = (directory / "hardhat.log").open("a", encoding="utf8")
     try:
@@ -53,10 +57,12 @@ def main():
             )
         for _ in range(80):
             if child and child.poll() is not None:
-                raise RuntimeError("Hardhat berhenti. Lihat hardhat.log.")
+                raise RuntimeError(f"Hardhat berhenti. Periksa {directory / 'hardhat.log'}.")
             if port_open(8545):
                 break
             time.sleep(0.15)
+        else:
+            raise RuntimeError(f"Hardhat belum siap di port 8545. Periksa {directory / 'hardhat.log'}.")
         if ledger.rpc("eth_chainId", []) != "0x7a69":
             raise RuntimeError("Port 8545 harus memakai jaringan lokal 31337.")
         ledger.restore(directory)
@@ -65,17 +71,10 @@ def main():
         ledger.archive_tx(directory, cfg["deployTx"])
         if args.test:
             return subprocess.call([sys.executable, "tests/demo.py"])
-        if not args.no_browser:
-            import threading
-
-            threading.Timer(2, lambda: webbrowser.open("http://127.0.0.1:8000")).start()
+        print("Menyiapkan dashboard. Tunggu pesan 'Uvicorn running on' di bawah.", flush=True)
         import uvicorn
 
-        print(
-            "Dashboard http://127.0.0.1:8000 · API http://127.0.0.1:8000/docs",
-            flush=True,
-        )
-        uvicorn.run("app:app", host="127.0.0.1", port=8000)
+        uvicorn.run("app:app", host="127.0.0.1", port=args.port)
     finally:
         if child:
             child.terminate()

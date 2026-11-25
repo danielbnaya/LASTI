@@ -2,19 +2,37 @@
 
 Aplikasi web lokal untuk simulasi prediksi pemakaian dan redistribusi PRC. Satu akun UDD dan tiga akun BDRS menggunakan dashboard, REST API, model regresi, SQLite, dan smart contract Solidity.
 
-## Menjalankan di Windows
+## Menjalankan di Windows lewat PowerShell
 
-1. Pasang **Python 3.12 64-bit** dan **Node.js 22 LTS 64-bit**. Saat memasang Python, aktifkan *Add Python to PATH*.
-2. Ekstrak seluruh ZIP ke satu folder. Buka **MULAI-WINDOWS.cmd** di folder proyek. Pada penggunaan pertama, peluncur membuat lingkungan Python dan mengunduh dependensi Python serta npm. Siapkan internet untuk langkah ini.
-3. Buka **http://127.0.0.1:8000** jika browser belum terbuka. Pilih akun **UDD-001**, sandi **demo-prc**.
-4. Biarkan terminal terbuka selama demo. Gunakan **Ganti akun** di dashboard untuk beralih peran. Tekan Ctrl+C di terminal untuk berhenti.
+Buka PowerShell dari folder proyek yang berisi start.py dan package.json. Jika memakai lokasi kelompok, jalankan:
 
-Perintah alternatif di PowerShell dari folder proyek:
+    Set-Location 'C:\Project\LASTI'
+    py -3.12 --version
+    node --version
+
+Gunakan Python 3.12 dan Node.js 22 LTS. Jalankan perintah berikut satu per satu untuk pemasangan pertama. Tunggu tiap perintah selesai. Jika salah satunya gagal, periksa pesan error di terminal sebelum melanjutkan.
 
     py -3.12 -m venv .venv
     .\.venv\Scripts\python.exe -m pip install -r requirements.txt
     npm.cmd ci
+
+Setiap kali akan menjalankan aplikasi:
+
     .\.venv\Scripts\python.exe start.py
+
+Tunggu sampai PowerShell menampilkan **Uvicorn running on http://127.0.0.1:8000**, lalu buka **http://127.0.0.1:8000** pada laptop yang sama. Gunakan akun UDD-001 dan sandi demo-prc. Biarkan terminal tetap terbuka. Tekan Ctrl+C setelah demo selesai.
+
+### Jika browser menampilkan “This site can’t be reached”
+
+- Jika terminal kembali ke prompt sebelum baris Uvicorn muncul, startup gagal. Baca pesan terakhir. Untuk error Hardhat, buka 25 baris terakhir log dengan perintah di bawah.
+- Jika port 8000 sedang dipakai, jalankan server dengan port berbeda dan buka alamat yang ditampilkan. Port 8545 dipakai oleh blockchain lokal.
+- Saat server berjalan, periksa respons dari PowerShell kedua. Status 200 menunjukkan dashboard dapat diakses dari laptop itu.
+
+    Get-Content .\data\hardhat.log -Tail 25
+    # Alternatif saat port dashboard sedang dipakai
+    .\.venv\Scripts\python.exe start.py --port 8001
+    # Tes dari terminal kedua (sesuaikan port)
+    (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/).StatusCode
 
 Di macOS/Linux:
 
