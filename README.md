@@ -7,10 +7,10 @@ Aplikasi web lokal untuk simulasi prediksi pemakaian dan redistribusi PRC. Satu 
 Buka PowerShell dari folder proyek yang berisi start.py dan package.json. Jika memakai lokasi kelompok, jalankan:
 
     Set-Location 'C:\Project\LASTI'
-    py -3.12 --version
+    py --list
     node --version
 
-Gunakan Python 3.12 dan Node.js 22 LTS. Jalankan perintah berikut satu per satu untuk pemasangan pertama. Tunggu tiap perintah selesai. Jika salah satunya gagal, periksa pesan error di terminal sebelum melanjutkan.
+Jika .\.venv\Scripts\python.exe sudah tersedia, pakai lingkungan itu. Untuk pemasangan baru, contoh di bawah memakai Python 3.12 dan Node.js 22 LTS. Jalankan perintah berikut satu per satu untuk pemasangan pertama. Tunggu tiap perintah selesai. Jika salah satunya gagal, periksa pesan error di terminal sebelum melanjutkan.
 
     py -3.12 -m venv .venv
     .\.venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -63,7 +63,7 @@ Angka 25/20/18 dihitung dari CSV oleh model. Perubahan persediaan, pemakaian, da
 
 ## Implementasi dan ruang lingkup
 
-- **AI** menggunakan regresi linear per fasilitas dengan fitur hari dalam minggu. Evaluasi kronologis membandingkan MAE model dengan MAE rata-rata historis pada 14 hari terakhir. Model operasional kemudian dilatih pada seluruh riwayat. MAE dan proyeksi harian terlihat pada menu Prediksi AI. Dataset sintetis dikalibrasi untuk skenario kelompok.
+- **AI** menggunakan regresi linear per fasilitas dengan fitur kategori hari dalam minggu. Koefisien per kategori dipelajari dari riwayat dengan solusi kuadrat terkecil berupa rata-rata pemakaian untuk hari tersebut. Implementasi memakai pustaka standar Python sehingga modul prediksi dapat dimuat tanpa DLL SciPy. Evaluasi kronologis membandingkan MAE model dengan MAE rata-rata historis pada 14 hari terakhir. Model operasional kemudian dilatih pada seluruh riwayat. MAE dan proyeksi harian terlihat pada menu Prediksi AI. Dataset sintetis dikalibrasi untuk skenario kelompok.
 - **Aturan stok** memakai hitungan AVAILABLE, prediksi, cadangan 5, kiriman masuk dari pesanan aktif, dan FEFO. Kandidat memiliki sisa masa simpan 5–14 hari. Transit diasumsikan satu hari. Jumlah rekomendasi dibatasi pemakaian yang diperkirakan sebelum kedaluwarsa dan stok tujuan yang akan habis lebih awal. Validasi ulang dan reservasi terjadi dalam satu transaksi SQLite saat persetujuan akhir.
 - **Blockchain** memakai satu node Hardhat lokal dan satu akun penulis milik backend. Identitas petugas berasal dari sesi aplikasi. Kontrak menyimpan SHA-256 dari payload yang memuat pesanan, tahap, waktu, fasilitas, aktor, jumlah, dan daftar ID. Hash transaksi Ethereum merujuk ke receipt terpisah. Verifikasi membaca log transaksi, receipt, dan nilai kontrak.
 - **Gangguan ledger** meninggalkan peristiwa dengan status tertunda. UDD dapat menekan Coba catat ulang. Kunci pesanan/tahap mencegah pencatatan ganda. Folder data menyimpan SQLite, konfigurasi kontrak, dan jurnal transaksi bertanda tangan. Peluncur memutar kembali transaksi asli jika node dimulai ulang. Simpan folder data sebagai satu kesatuan.

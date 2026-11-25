@@ -1,7 +1,6 @@
+"""Regresi kuadrat terkecil dengan satu kategori per hari dalam minggu."""
 from datetime import date, timedelta
-import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error
+from statistics import fmean
 
 DAY = date(2026, 11, 25)
 FACILITIES = ("BDRS-001", "BDRS-002", "BDRS-003")
@@ -9,26 +8,31 @@ UDD = "UDD-001"
 RESERVE = 5
 
 
-def features(days):
-    return np.array([[int(day.weekday() == w) for w in range(1, 7)] for day in days])
+def fit_weekdays(history):
+    # Dengan indikator hari, solusi kuadrat terkecil untuk setiap kategori
+    # adalah rata-rata respons semua observasi dalam kategori tersebut.
+    groups = [[] for _ in range(7)]
+    for weekday, quantity in history:
+        groups[weekday].append(quantity)
+    overall = fmean(quantity for _, quantity in history)
+    return [fmean(group) if group else overall for group in groups]
 
 
 def predict(rows, horizon):
-    days = [date.fromisoformat(r["day"]) for r in rows]
-    y = np.array([r["qty"] for r in rows])
-    X = features(days)
-    split = len(y) - 14
-    model = LinearRegression().fit(X[:split], y[:split])
-    error = mean_absolute_error(y[split:], np.maximum(0, model.predict(X[split:])))
-    baseline = mean_absolute_error(y[split:], np.full(14, y[:split].mean()))
-    model.fit(X, y)
-    future = [DAY + timedelta(days=i) for i in range(1, horizon + 1)]
-    values = np.maximum(0, model.predict(features(future)))
+    history = [(date.fromisoformat(row["day"]).weekday(), row["qty"]) for row in rows]
+    train, test = history[:-14], history[-14:]
+    fitted = fit_weekdays(train)
+    mae = fmean(abs(quantity - fitted[day]) for day, quantity in test)
+    average = fmean(quantity for _, quantity in train)
+    baseline = fmean(abs(quantity - average) for _, quantity in test)
+
+    fitted = fit_weekdays(history)
+    daily = [fitted[(DAY + timedelta(days=i)).weekday()] for i in range(1, horizon + 1)]
     return dict(
-        predictedDemand=int(round(sum(values))),
-        daily=values.tolist(),
-        mae=round(float(error), 3),
-        baseline=round(float(baseline), 3),
-        train=split,
-        test=14,
+        predictedDemand=int(round(sum(daily))),
+        daily=daily,
+        mae=round(mae, 3),
+        baseline=round(baseline, 3),
+        train=len(train),
+        test=len(test),
     )
