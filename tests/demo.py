@@ -171,7 +171,33 @@ def test_workflow():
         )
         move(dest, "UDD_TO_DESTINATION", bags, 422)
         check("Kantong ditahan wajib beralasan dan ditolak saat dikirim", True)
+        discrepancy_path = "/prc-redistribution/receipt-discrepancies"
+        discrepancy = {
+            "orderId": order,
+            "receivedBagIds": bags[:-2],
+            "affectedBagIds": [bags[0]],
+            "reason": "Satu kantong belum tiba. Ada ketidaksesuaian label pada kantong lain.",
+        }
+        req("POST", discrepancy_path, UDD, discrepancy, 403)
+        req("POST", discrepancy_path, dest, {**discrepancy, "reason": " "}, 422)
+        reported = req("POST", discrepancy_path, dest, discrepancy)
+        req("POST", discrepancy_path, dest, discrepancy)
+        visible_to_udd = req("GET", "/dashboard", UDD)
+        check(
+            "BDRS melaporkan ID yang kurang dan ID yang bermasalah kepada UDD",
+            reported["receiptReports"][0]["affected"] == [bags[0], bags[-2]]
+            and len(visible_to_udd["plans"][0]["receiptReports"]) == 1
+            and any("melaporkan ketidaksesuaian" in n["message"] for n in visible_to_udd["notes"]),
+        )
+        check(
+            "Kiriman bermasalah tidak masuk stok dan belum tercatat sebagai serah terima kedua",
+            reported["stage"] == "TO_DEST"
+            and visible_to_udd["metrics"][0]["currentStock"] == 10
+            and len(reported["events"]) == 2,
+        )
         p = move(dest, "UDD_TO_DESTINATION", bags[:-1])
+        req("POST", discrepancy_path, dest, discrepancy, 409)
+        check("Laporan tetap terlihat setelah tindak lanjut dan konfirmasi", len(p["receiptReports"]) == 1)
         summary = req("GET", "/dashboard", UDD)
         check(
             "Akhir transaksi: asal 25, tujuan 19, satu kantong ditahan di UDD",
@@ -298,7 +324,7 @@ def test_workflow():
                 "Catatan proses lama hilang, sementara catatan stok tetap ada",
                 all(
                     not c.execute(f"SELECT 1 FROM {table}").fetchone()
-                    for table in ("plans", "events", "decisions", "inspections")
+                    for table in ("plans", "events", "decisions", "inspections", "receipt_reports")
                 )
                 and [r["message"] for r in c.execute("SELECT message FROM notes")]
                 == ["1 data kantong disimpan"],
