@@ -45,6 +45,17 @@ const iconPaths = {
   layers: "M3 8l9-5 9 5-9 5z M3 12l9 5 9-5M3 16l9 5 9-5",
 };
 const viewIcons = ["overview", "bag", "chart", "route", "bell"];
+const fullDate = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+const shortDate = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
 function Icon({ name }) {
   return (
     <svg
@@ -332,7 +343,10 @@ function App() {
           </div>
           <span className="sim-date">
             <Icon name="calendar" />
-            Simulasi · 25 November 2026
+            Simulasi ·{" "}
+            <time dateTime={data.day}>
+              {fullDate.format(new Date(data.day))}
+            </time>
           </span>
         </div>
         <header>
@@ -751,10 +765,18 @@ function Inventory({ user, api, run, reload, nonce, busy, E, M }) {
     </>
   );
 }
-function Prediction({ data, period, H, user, api, run, busy, reload }) {
+function Prediction({ data, period, H, api, run, busy, reload }) {
   const [f, S] = useState(data.facilities[0]);
-  let m = data.metrics.find((x) => x.facilityId === f) || data.metrics[0];
-  let max = Math.max(...m.daily, 1);
+  const m = data.metrics.find((x) => x.facilityId === f) || data.metrics[0];
+  const max = Math.max(...m.daily, 1);
+  const dates = m.daily.map((_, i) => {
+    const day = new Date(data.day);
+    day.setUTCDate(day.getUTCDate() + i + 1);
+    return day;
+  });
+  const firstDate = dates[0];
+  const lastDate = dates[dates.length - 1];
+  const range = fullDate.formatRange(firstDate, lastDate);
   return (
     <>
       <section className="card">
@@ -793,6 +815,9 @@ function Prediction({ data, period, H, user, api, run, busy, reload }) {
             Jalankan prediksi
           </button>
         </div>
+        <p className="space muted" role="status">
+          Rentang prediksi · <b>{range}</b>
+        </p>
       </section>
       <div className="grid space">
         <Stat
@@ -800,7 +825,7 @@ function Prediction({ data, period, H, user, api, run, busy, reload }) {
           icon="chart"
           title="Perkiraan pemakaian"
           value={m.predictedDemand}
-          sub={"kantong dalam " + parseInt(period) + " hari"}
+          sub={`kantong dalam ${dates.length} hari`}
         />
         <Stat
           icon="bag"
@@ -817,18 +842,22 @@ function Prediction({ data, period, H, user, api, run, busy, reload }) {
       </div>
       <section className="card">
         <h2>Prediksi harian · {m.facilityId}</h2>
-        <div className="chart" aria-label="Prediksi harian">
+        <div
+          className="chart"
+          role="img"
+          aria-label={`Prediksi harian, ${range}`}
+        >
           {m.daily.map((v, i) => (
             <i
               key={i}
-              title={"Hari " + (i + 1) + ": " + v.toFixed(2) + " kantong"}
+              title={`${fullDate.format(dates[i])} · ${v.toFixed(2)} kantong`}
               style={{ height: 4 + (94 * v) / max + "%" }}
             />
           ))}
         </div>
         <div className="row between tiny muted">
-          <span>Hari 1</span>
-          <span>Hari {m.daily.length}</span>
+          <span>{shortDate.format(firstDate)}</span>
+          <span>{shortDate.format(lastDate)}</span>
         </div>
         <div className="notice">
           Potensi surplus <b>{m.potentialSurplus}</b> kantong · Potensi
