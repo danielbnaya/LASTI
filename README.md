@@ -69,6 +69,10 @@ Masuk sebagai **UDD-001**, buka **Redistribusi → Daftar rencana → Reset data
 
 Aplikasi menghitung ulang rekomendasi menggunakan stok setelah reset. Nomor usulan dan pesanan berikutnya melanjutkan urutan sebelumnya untuk menjaga ID transaksi tetap unik. Bukti yang sudah tercatat di blockchain tetap berada di ledger lokal.
 
+### Reset stok darah simulasi
+
+Masuk sebagai **UDD-001**, buka **Persediaan → Daftar kantong → Reset stok darah**, lalu konfirmasi. Reset berlaku untuk seluruh fasilitas. Stok kembali menjadi **73 kantong awal** (BDRS-001 sebanyak 10, BDRS-002 sebanyak 35, dan BDRS-003 sebanyak 28). Kantong manual, stok demo tambahan, perubahan status persediaan, dan usulan atau pesanan redistribusi di aplikasi terhapus. Riwayat pemakaian untuk AI dan bukti transaksi pada blockchain tetap tersimpan. Untuk menambahkan kembali 90 kantong uji, jalankan skrip pada bagian berikutnya.
+
 ## Stok tambahan untuk uji rekomendasi
 
 Dari PowerShell di folder proyek, jalankan perintah berikut satu kali:

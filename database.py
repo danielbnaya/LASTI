@@ -6,6 +6,7 @@ from forecast import DAY, FACILITIES
 
 BASE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("PRC_DATA", BASE / "data"))
+EXTRA_STOCK_MARKER = "redistribution_demo_stock_v1"
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS bags(id TEXT PRIMARY KEY, facility TEXT NOT NULL, expiry TEXT NOT NULL, status TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS usage(facility TEXT, day TEXT, qty INTEGER NOT NULL, PRIMARY KEY(facility,day));
@@ -36,6 +37,18 @@ def db(write=False):
         c.close()
 
 
+def seed_initial_stock(c):
+    bags = []
+    for facility, start, quantity, near in zip(
+        FACILITIES, (1, 21, 61), (10, 35, 28), (0, 10, 5)
+    ):
+        for i in range(quantity):
+            expiry = DAY + timedelta(days=14 if i < near else 35)
+            bags.append((f"PRC-{start + i:04}", facility, str(expiry)))
+    c.executemany("INSERT INTO bags VALUES(?,?,?,'AVAILABLE')", bags)
+    return len(bags)
+
+
 def init():
     with db(True) as c:
         c.executescript(SCHEMA)
@@ -46,12 +59,4 @@ def init():
             c.executemany(
                 "INSERT INTO usage VALUES(:facility,:day,:qty)", csv.DictReader(f)
             )
-        for fac, start, n, near in zip(
-            FACILITIES, [1, 21, 61], [10, 35, 28], [0, 10, 5]
-        ):
-            for i in range(n):
-                expiry = DAY + timedelta(days=14 if i < near else 35)
-                c.execute(
-                    "INSERT INTO bags VALUES(?,?,?,'AVAILABLE')",
-                    (f"PRC-{start + i:04}", fac, str(expiry)),
-                )
+        seed_initial_stock(c)

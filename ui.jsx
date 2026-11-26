@@ -427,13 +427,14 @@ function Plans({ plans, open, onCancel, busy }) {
     </p>
   );
 }
-function Inventory({ user, api, run, reload, nonce, busy, E }) {
+function Inventory({ user, api, run, reload, nonce, busy, E, M }) {
   const [f, S] = useState(user === U ? F[0] : user),
     [bags, A] = useState([]),
     [id, I] = useState(""),
     [expiry, X] = useState("2026-12-20"),
     [status, V] = useState("AVAILABLE"),
-    [query, Q] = useState("");
+    [query, Q] = useState(""),
+    [confirmReset, setConfirmReset] = useState(false);
   useEffect(() => {
     let alive = true;
     api("/facilities/" + f + "/prc-stock")
@@ -444,6 +445,18 @@ function Inventory({ user, api, run, reload, nonce, busy, E }) {
     };
   }, [f, nonce]);
   const stock = "/facilities/" + f;
+
+  function resetStock() {
+    run(async () => {
+      const result = await api("/prc-stock/reset", "POST");
+      setConfirmReset(false);
+      Q("");
+      I("");
+      M(`Stok kembali ke ${result.stockCount} kantong awal. ${result.removedPlans} rencana dihapus.`);
+      await reload();
+    });
+  }
+
   return (
     <>
       <section className="card">
@@ -515,8 +528,38 @@ function Inventory({ user, api, run, reload, nonce, busy, E }) {
       <section className="card">
         <div className="cardhead">
           <h2>Daftar kantong</h2>
-          <small>{bags.length} kantong · PRC O+</small>
+          <div className="row">
+            <small>{bags.length} kantong · PRC O+</small>
+            {user === U && (
+              <button
+                className="alertbtn"
+                disabled={busy}
+                aria-expanded={confirmReset}
+                onClick={() => setConfirmReset(!confirmReset)}
+              >
+                Reset stok darah
+              </button>
+            )}
+          </div>
         </div>
+        {confirmReset && (
+          <div className="notice">
+            <h3>Kembalikan stok seluruh fasilitas ke data awal?</h3>
+            <p>
+              Reset memulihkan 73 kantong simulasi awal di tiga BDRS.
+              Kantong tambahan dan seluruh daftar redistribusi di aplikasi
+              akan dihapus. Riwayat pemakaian untuk prediksi tetap tersimpan.
+            </p>
+            <div className="row space">
+              <button disabled={busy} onClick={() => setConfirmReset(false)}>
+                Kembali ke persediaan
+              </button>
+              <button className="alertbtn" disabled={busy} onClick={resetStock}>
+                Ya, reset stok darah
+              </button>
+            </div>
+          </div>
+        )}
         <table>
           <thead>
             <tr>

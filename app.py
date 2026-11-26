@@ -7,7 +7,7 @@ from fastapi import FastAPI, APIRouter, Depends, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import ledger
-from database import BASE, DATA, db, init
+from database import BASE, DATA, EXTRA_STOCK_MARKER, db, init, seed_initial_stock
 from service import (
     DAY,
     FACILITIES,
@@ -240,6 +240,19 @@ def dashboard(user: User, period: str = "30d"):
                 "SELECT * FROM notes WHERE facility=? ORDER BY id DESC LIMIT 12",
                 (user,),
             ),
+        }
+
+
+@api.post("/prc-stock/reset")
+def reset_stock(user: User):
+    require(user == UDD, "Reset stok darah hanya dapat dilakukan oleh UDD", 403)
+    with db(True) as c:
+        result = reset_redistribution(c, restore_stock=False)
+        c.execute("DELETE FROM bags")
+        c.execute("DELETE FROM settings WHERE name=?", (EXTRA_STOCK_MARKER,))
+        return {
+            "stockCount": seed_initial_stock(c),
+            "removedPlans": result["removedPlans"],
         }
 
 

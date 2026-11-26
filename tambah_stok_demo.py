@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from database import DATA, db, init
+from database import DATA, EXTRA_STOCK_MARKER, db, init
 from forecast import DAY, FACILITIES
 
 # Stok tujuan ditambah sebagian kecil sebagai AVAILABLE agar masih ada
@@ -21,14 +21,13 @@ PROFILES = {
         "PATIENT_RESERVED": [9, 14, 26, 32] * 3,
     },
 }
-IMPORT_MARKER = "redistribution_demo_stock_v1"
 
 
 def add_demo_stock():
     init()
     with db(write=True) as connection:
         existing = connection.execute(
-            "SELECT 1 FROM settings WHERE name=?", (IMPORT_MARKER,)
+            "SELECT 1 FROM settings WHERE name=?", (EXTRA_STOCK_MARKER,)
         )
         if existing.fetchone():
             return {}
@@ -56,7 +55,7 @@ def add_demo_stock():
             added[facility] = count_by_status
 
         connection.execute(
-            "INSERT INTO settings(name,value) VALUES(?,?)", (IMPORT_MARKER, "imported")
+            "INSERT INTO settings(name,value) VALUES(?,?)", (EXTRA_STOCK_MARKER, "imported")
         )
     return added
 

@@ -194,11 +194,7 @@ def cancel_plan(c, plan):
         note(c, facility, f"{plan['id']} dibatalkan oleh UDD.")
 
 
-def reset_redistribution(c):
-    removed = c.execute("SELECT COUNT(*) FROM plans").fetchone()[0]
-    if not removed:
-        return {"removedPlans": 0, "restoredBags": 0}
-
+def restore_redistributed_bags(c):
     # Satu kantong bisa berpindah lebih dari sekali. Urutan persetujuan
     # akhir, termasuk peristiwa yang masih menunggu blockchain, menentukan asal awalnya.
     origins = {}
@@ -218,7 +214,15 @@ def reset_redistribution(c):
                  AND (facility<>? OR status<>'AVAILABLE')""",
             (facility, bag, facility),
         ).rowcount
+    return restored
 
+
+def reset_redistribution(c, *, restore_stock=True):
+    removed = c.execute("SELECT COUNT(*) FROM plans").fetchone()[0]
+    if not removed:
+        return {"removedPlans": 0, "restoredBags": 0}
+
+    restored = restore_redistributed_bags(c) if restore_stock else 0
     save_plan_number(c, last_plan_number(c))
     c.execute(
         """DELETE FROM notes WHERE SUBSTR(message, 1, INSTR(message, ' ') - 1) IN (
