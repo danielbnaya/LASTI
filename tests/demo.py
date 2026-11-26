@@ -62,6 +62,20 @@ def test_workflow():
         options = req("GET", "/prc-redistribution/recommendations", UDD)
         rec = next(x for x in options if x["sourceFacilityId"] == src)
         create = "/prc-redistribution/recommendations"
+        check(
+            "Pratinjau memuat ID dan tanggal kedaluwarsa",
+            [bag["bloodBagId"] for bag in rec["bags"]] == rec["bloodBagIds"]
+            and all(bag["expiresAt"] == "2026-12-09" for bag in rec["bags"]),
+        )
+        stale = {
+            **rec,
+            "bags": [{**rec["bags"][0], "expiresAt": "2026-12-08"}, *rec["bags"][1:]],
+        }
+        req("POST", create, UDD, stale, 409)
+        check(
+            "Pratinjau lama tidak menghasilkan usulan",
+            not req("GET", "/dashboard", UDD)["plans"],
+        )
         p = req("POST", create, UDD, rec)
         key = p["id"]
         bags = p["bags"]
@@ -84,6 +98,8 @@ def test_workflow():
         decision(UDD, "UDD_FINAL_APPROVAL", expected=409)
         decision(dest, "SOURCE_CONFIRMATION", expected=403)
         decision(src, "SOURCE_CONFIRMATION")
+        req("POST", f"/prc-redistribution/plans/{key}/cancel", UDD, status=409)
+        check("UDD tidak dapat membatalkan setelah konfirmasi pertama", True)
         decision(dest, "DESTINATION_CONFIRMATION")
         p = decision(UDD, "UDD_FINAL_APPROVAL")
         order = p["orderId"]
@@ -157,6 +173,26 @@ def test_workflow():
         e["payload"] += " "
         check("Perubahan payload terdeteksi", not ledger.verify(DATA, e))
         # Buat dan tolak rencana terpisah.
+        key = req(
+            "POST",
+            create,
+            UDD,
+            dict(sourceFacilityId=third, destinationFacilityId=dest, period="30d"),
+        )["id"]
+        cancel = f"/prc-redistribution/plans/{key}/cancel"
+        before_cancel = req("GET", "/facilities/" + third + "/prc-stock", UDD)
+        req("POST", cancel, third, status=403)
+        canceled = req("POST", cancel, UDD)
+        req("POST", cancel, UDD)
+        decision(third, "SOURCE_CONFIRMATION", expected=409)
+        check(
+            "Pembatalan UDD tercatat tanpa mengubah kantong dan dapat diulang",
+            canceled["stage"] == "CANCELLED"
+            and canceled["orderId"] is None
+            and not canceled["decisions"]
+            and not canceled["events"]
+            and before_cancel == req("GET", "/facilities/" + third + "/prc-stock", UDD),
+        )
         key = req(
             "POST",
             create,
