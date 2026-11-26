@@ -24,6 +24,7 @@ from service import (
     ids,
     metrics,
     note,
+    report_receipt_discrepancy,
     require,
     reset_redistribution,
     rows,
@@ -90,6 +91,16 @@ class Transfer(BaseModel):
     orderId: str
     handoverStage: Literal["SOURCE_TO_UDD", "UDD_TO_DESTINATION"]
     bloodBagIds: list[str] = Field(min_length=1, max_length=100)
+
+
+BagId = Annotated[str, Field(pattern=r"^PRC-[0-9]{4,10}$")]
+
+
+class ReceiptDiscrepancy(BaseModel):
+    orderId: str
+    receivedBagIds: list[BagId] = Field(max_length=100)
+    affectedBagIds: list[BagId] = Field(default_factory=list, max_length=100)
+    reason: str = Field(min_length=1, max_length=400)
 
 
 class Item(BaseModel):
@@ -168,6 +179,18 @@ def detail(c, p):
         "inspections": rows(
             c, "SELECT * FROM inspections WHERE plan=? ORDER BY bag", (key,)
         ),
+        "receiptReports": [
+            {
+                **report,
+                "received": json.loads(report["received"]),
+                "affected": json.loads(report["affected"]),
+            }
+            for report in rows(
+                c,
+                "SELECT id,received,affected,reason,actor,at FROM receipt_reports WHERE plan=? ORDER BY id",
+                (key,),
+            )
+        ],
         "events": [
             {**e, "payload": json.loads(e["payload"])}
             for e in rows(
@@ -416,6 +439,16 @@ def transfer(body: Transfer, user: User):
     flush()
     with db() as c:
         return detail(c, getplan(c, body.orderId))
+
+
+@api.post("/prc-redistribution/receipt-discrepancies")
+def receipt_discrepancy(body: ReceiptDiscrepancy, user: User):
+    with db(True) as c:
+        plan = getplan(c, body.orderId)
+        report_receipt_discrepancy(
+            c, plan, user, body.receivedBagIds, body.affectedBagIds, body.reason
+        )
+        return detail(c, plan)
 
 
 @api.post("/prc-redistribution/inspections")

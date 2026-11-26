@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS usage(facility TEXT, day TEXT, qty INTEGER NOT NULL, 
 CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY, src TEXT, dst TEXT, bags TEXT, stage TEXT, orderId TEXT UNIQUE, horizon INTEGER);
 CREATE TABLE IF NOT EXISTS decisions(plan TEXT, stage TEXT, actor TEXT, decision TEXT, note TEXT, at TEXT, PRIMARY KEY(plan,stage));
 CREATE TABLE IF NOT EXISTS inspections(plan TEXT,bag TEXT,result TEXT,reason TEXT,actor TEXT,at TEXT,PRIMARY KEY(plan,bag));
+CREATE TABLE IF NOT EXISTS receipt_reports(id INTEGER PRIMARY KEY, plan TEXT NOT NULL, received TEXT NOT NULL, affected TEXT NOT NULL, reason TEXT NOT NULL, actor TEXT NOT NULL, at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,plan TEXT,payload TEXT,tx TEXT);
 CREATE TABLE IF NOT EXISTS notes(id INTEGER PRIMARY KEY, facility TEXT, message TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS settings(name TEXT PRIMARY KEY, value TEXT);

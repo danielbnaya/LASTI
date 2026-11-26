@@ -232,6 +232,7 @@ def reset_redistribution(c, *, restore_stock=True):
     c.execute("DELETE FROM events")
     c.execute("DELETE FROM decisions")
     c.execute("DELETE FROM inspections")
+    c.execute("DELETE FROM receipt_reports")
     c.execute("DELETE FROM plans")
     return {"removedPlans": removed, "restoredBags": restored}
 
@@ -303,21 +304,58 @@ def approve(c, p, actor, stage, decision, reason):
         note(c, f, f"{p['id']} · {stage} · {decision}")
 
 
+def ready_to_forward(c, plan_id):
+    return [
+        row["bag"]
+        for row in c.execute(
+            "SELECT bag FROM inspections WHERE plan=? AND result='READY_TO_FORWARD'",
+            (plan_id,),
+        )
+    ]
+
+
+def report_receipt_discrepancy(c, plan, actor, received_ids, affected_ids, reason):
+    require(actor == plan["dst"], "Laporan hanya dapat dibuat oleh BDRS tujuan", 403)
+    require(plan["stage"] == "TO_DEST", "Pesanan belum atau sudah diterima", 409)
+    expected = set(ready_to_forward(c, plan["id"]))
+    received = set(received_ids)
+    affected = set(affected_ids)
+    require(
+        len(received) == len(received_ids), "ID kantong diterima tidak boleh berulang", 422
+    )
+    require(
+        affected <= (expected | received),
+        "ID bermasalah harus tercantum pada daftar UDD atau daftar yang diterima.",
+        422,
+    )
+    # Selisih ID masuk otomatis. ID tambahan menandai masalah pada kantong
+    # yang memang diharapkan dan tercatat tiba.
+    affected |= expected ^ received
+    require(affected, "Masukkan ID kantong bermasalah.", 422)
+    reason = reason.strip()
+    require(reason, "Isi alasan ketidaksesuaian.", 422)
+    received_json = canonical(sorted(received))
+    affected_json = canonical(sorted(affected))
+    last = c.execute(
+        """SELECT received, affected, reason FROM receipt_reports
+           WHERE plan=? ORDER BY id DESC LIMIT 1""",
+        (plan["id"],),
+    ).fetchone()
+    if last and tuple(last) == (received_json, affected_json, reason):
+        return
+    c.execute(
+        """INSERT INTO receipt_reports(plan,received,affected,reason,actor,at)
+           VALUES(?,?,?,?,?,?)""",
+        (plan["id"], received_json, affected_json, reason, actor, now()),
+    )
+    for facility in (UDD, actor):
+        note(c, facility, f"{plan['orderId']} · {actor} melaporkan ketidaksesuaian penerimaan.")
+
+
 def handover(c, p, actor, stage, received):
     first = stage == "SOURCE_TO_UDD"
     require(actor == (UDD if first else p["dst"]), "Akun bukan penerima tahap ini", 403)
-    expected = (
-        ids(p)
-        if first
-        else [
-            r["bag"]
-            for r in rows(
-                c,
-                "SELECT bag FROM inspections WHERE plan=? AND result='READY_TO_FORWARD'",
-                (p["id"],),
-            )
-        ]
-    )
+    expected = ids(p) if first else ready_to_forward(c, p["id"])
     require(
         bool(expected) and sorted(received) == sorted(expected),
         "Daftar ID harus sama dengan kantong yang boleh diserahterimakan",

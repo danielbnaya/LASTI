@@ -56,10 +56,12 @@ Data simulasi menggunakan tanggal tetap **25 November 2026**, satu kelompok PRC 
 | 5 | Ganti akun ke UDD-001 dan setujui. | ORD-0001 dibuat. Sepuluh ID direservasi bersama, stok tersedia asal menjadi 25. Bukti blockchain pertama tersedia. |
 | 6 | Pada pesanan yang sama, isi sepuluh ID penerimaan, atau pilih Isi daftar untuk simulasi, lalu Konfirmasi penerimaan. | Sepuluh kantong berada di UDD dan menunggu pemeriksaan. Bukti kedua tersedia. |
 | 7 | Pada pemeriksaan, pilih Siap diteruskan untuk PRC-0021 hingga PRC-0029. Pilih Ditahan bagi PRC-0030, isi alasan simulasi, lalu Simpan hasil pemeriksaan. | Sembilan ID dapat diteruskan dan satu berada di UDD. |
-| 8 | Ganti akun ke BDRS-001, buka ORD-0001 lalu konfirmasi sembilan ID yang diterima. | Stok tersedia BDRS-001 menjadi 19. Bukti ketiga tersedia. |
+| 8 | Ganti akun ke BDRS-001, buka ORD-0001, tinjau hasil pemeriksaan UDD, pilih **Kiriman sesuai**, lalu konfirmasi sembilan ID yang diterima. | Stok tersedia BDRS-001 menjadi 19. Bukti ketiga tersedia. |
 | 9 | Pada Riwayat blockchain, klik Verifikasi untuk masing-masing peristiwa. | Tiga receipt sukses, tiga hash transaksi berbeda. Setiap tombol membaca kembali bukti dari node Ethereum lokal. |
 
 Pada **Daftar rencana**, UDD dapat memilih **Batalkan usulan** sebelum ada keputusan dari pihak mana pun. Setelah dikonfirmasi, rencana terlihat dengan status **Dibatalkan** dan hasil rekomendasi diperbarui otomatis berdasarkan stok terbaru. Pencarian menampilkan pasangan asal dan tujuan yang belum memiliki rencana aktif. Setelah rencana selesai, ditolak, atau dibatalkan, pasangan dapat muncul kembali jika memenuhi aturan stok.
+
+Jika kiriman bermasalah, BDRS tujuan memilih **Ada ketidaksesuaian**. Masukkan daftar ID yang benar-benar tiba, ID tambahan yang bermasalah bila ada, dan alasannya. Sistem otomatis mencatat selisih dengan daftar kantong yang lolos pemeriksaan UDD. UDD mendapatkan notifikasi dan dapat melihat laporan di detail pesanan. Stok penerima baru bertambah setelah tindak lanjut dan konfirmasi kiriman sesuai. Laporan tersimpan di aplikasi, dan transaksi blockchain tahap kedua dicatat saat penerimaan dikonfirmasi.
 
 Angka 25/20/18 dihitung dari CSV oleh model. Perubahan persediaan, pemakaian, dan periode prediksi dapat mengubah rekomendasi.
 

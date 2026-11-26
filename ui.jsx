@@ -452,7 +452,9 @@ function Inventory({ user, api, run, reload, nonce, busy, E, M }) {
       setConfirmReset(false);
       Q("");
       I("");
-      M(`Stok kembali ke ${result.stockCount} kantong awal. ${result.removedPlans} rencana dihapus.`);
+      M(
+        `Stok kembali ke ${result.stockCount} kantong awal. ${result.removedPlans} rencana dihapus.`,
+      );
       await reload();
     });
   }
@@ -546,9 +548,9 @@ function Inventory({ user, api, run, reload, nonce, busy, E, M }) {
           <div className="notice">
             <h3>Kembalikan stok seluruh fasilitas ke data awal?</h3>
             <p>
-              Reset memulihkan 73 kantong simulasi awal di tiga BDRS.
-              Kantong tambahan dan seluruh daftar redistribusi di aplikasi
-              akan dihapus. Riwayat pemakaian untuk prediksi tetap tersimpan.
+              Reset memulihkan 73 kantong simulasi awal di tiga BDRS. Kantong
+              tambahan dan seluruh daftar redistribusi di aplikasi akan dihapus.
+              Riwayat pemakaian untuk prediksi tetap tersimpan.
             </p>
             <div className="row space">
               <button disabled={busy} onClick={() => setConfirmReset(false)}>
@@ -906,6 +908,9 @@ function Detail({ p, user, api, run, reload, busy, back, M }) {
     [held, H] = useState({}),
     [reasons, Y] = useState({}),
     [entry, A] = useState(""),
+    [receiptResult, setReceiptResult] = useState(""),
+    [affected, setAffected] = useState(""),
+    [receiptReason, setReceiptReason] = useState(""),
     [verified, V] = useState({});
   const approvals = {
     SOURCE: [p.src, "SOURCE_CONFIRMATION"],
@@ -930,6 +935,41 @@ function Detail({ p, user, api, run, reload, busy, back, M }) {
     : p.inspections
         .filter((i) => i.result === "READY_TO_FORWARD")
         .map((i) => i.bag);
+  const discrepancy = !first && receiptResult === "DISCREPANCY";
+  const parseIds = (value) =>
+    value
+      .trim()
+      .split(/[\s,]+/)
+      .filter(Boolean);
+
+  function submitReceipt() {
+    const bloodBagIds = parseIds(entry);
+    run(
+      async () => {
+        if (discrepancy) {
+          await api("/prc-redistribution/receipt-discrepancies", "POST", {
+            orderId: p.orderId,
+            receivedBagIds: bloodBagIds,
+            affectedBagIds: parseIds(affected),
+            reason: receiptReason.trim(),
+          });
+          setAffected("");
+          setReceiptReason("");
+        } else {
+          await api("/prc-redistribution/handovers", "POST", {
+            orderId: p.orderId,
+            handoverStage: first ? "SOURCE_TO_UDD" : "UDD_TO_DESTINATION",
+            bloodBagIds,
+          });
+        }
+        await reload();
+      },
+      discrepancy
+        ? "Ketidaksesuaian dilaporkan ke UDD."
+        : "Serah terima disimpan.",
+    );
+  }
+
   return (
     <>
       <div className="row">
@@ -1014,42 +1054,124 @@ function Detail({ p, user, api, run, reload, busy, back, M }) {
           </div>
         )}
       </section>
+      {p.inspections.length > 0 && (
+        <section className="card">
+          <h2>Hasil pemeriksaan UDD</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>ID kantong</th>
+                <th>Keputusan</th>
+                <th>Catatan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {p.inspections.map((i) => (
+                <tr key={i.bag}>
+                  <td>{i.bag}</td>
+                  <td>
+                    <Tag v={i.result} />
+                  </td>
+                  <td>{i.reason || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+      {p.receiptReports?.length > 0 && (
+        <section className="card">
+          <h2>Laporan ketidaksesuaian penerimaan</h2>
+          {p.stage === "TO_DEST" && (
+            <p className="muted space">
+              Menunggu tindak lanjut UDD dan BDRS. Kiriman belum masuk stok
+              BDRS.
+            </p>
+          )}
+          <ul className="timeline">
+            {p.receiptReports.map((report) => (
+              <li key={report.id}>
+                <b>{report.actor}</b> ·{" "}
+                {new Date(report.at).toLocaleString("id-ID")}
+                <p>ID bermasalah: {report.affected.join(", ")}</p>
+                <p>
+                  ID yang tercatat tiba:{" "}
+                  {report.received.join(", ") || "Tidak ada"}
+                </p>
+                <p>Alasan: {report.reason}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {receive && (
         <section className="card">
           <h2>Konfirmasi penerimaan · {first ? "UDD" : "BDRS tujuan"}</h2>
-          <p className="muted space">
-            Masukkan ID kantong yang diterima, dipisahkan spasi atau koma.
-          </p>
           <div className="stack space">
-            <textarea
-              aria-label="ID kantong diterima"
-              value={entry}
-              onChange={(e) => A(e.target.value)}
-            />
+            {!first && (
+              <label>
+                Hasil pemeriksaan penerimaan
+                <select
+                  value={receiptResult}
+                  onChange={(e) => setReceiptResult(e.target.value)}
+                >
+                  <option value="">Pilih hasil pemeriksaan</option>
+                  <option value="MATCH">Kiriman sesuai</option>
+                  <option value="DISCREPANCY">Ada ketidaksesuaian</option>
+                </select>
+              </label>
+            )}
+            <label>
+              ID kantong diterima
+              <textarea
+                aria-label="ID kantong diterima"
+                value={entry}
+                onChange={(e) => A(e.target.value)}
+                placeholder="Pisahkan ID dengan spasi atau koma"
+              />
+            </label>
+            {discrepancy && (
+              <>
+                <p className="muted">
+                  Masukkan ID yang benar-benar tiba. Kosongkan jika tidak ada
+                  kantong yang tiba. Selisih dengan daftar UDD akan dicatat
+                  otomatis.
+                </p>
+                <label>
+                  ID kantong bermasalah yang sudah tiba
+                  <textarea
+                    value={affected}
+                    onChange={(e) => setAffected(e.target.value)}
+                    placeholder="Isi jika ada masalah pada kantong yang tercatat tiba"
+                  />
+                </label>
+                <label>
+                  Alasan ketidaksesuaian
+                  <textarea
+                    maxLength={400}
+                    required
+                    value={receiptReason}
+                    onChange={(e) => setReceiptReason(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
             <div className="buttons">
-              <button onClick={() => A(expected.join(", "))}>
+              <button disabled={busy} onClick={() => A(expected.join(", "))}>
                 Isi daftar untuk simulasi
               </button>
               <button
                 className="primary"
-                disabled={busy}
-                onClick={() =>
-                  run(async () => {
-                    await api("/prc-redistribution/handovers", "POST", {
-                      orderId: p.orderId,
-                      handoverStage: first
-                        ? "SOURCE_TO_UDD"
-                        : "UDD_TO_DESTINATION",
-                      bloodBagIds: entry
-                        .trim()
-                        .split(/[\s,]+/)
-                        .filter(Boolean),
-                    });
-                    await reload();
-                  }, "Serah terima disimpan.")
+                disabled={
+                  busy ||
+                  (!first && !receiptResult) ||
+                  (discrepancy && !receiptReason.trim())
                 }
+                onClick={submitReceipt}
               >
-                Konfirmasi penerimaan
+                {discrepancy
+                  ? "Laporkan ketidaksesuaian"
+                  : "Konfirmasi penerimaan"}
               </button>
             </div>
           </div>
@@ -1116,31 +1238,6 @@ function Detail({ p, user, api, run, reload, busy, back, M }) {
           >
             Simpan hasil pemeriksaan
           </button>
-        </section>
-      )}
-      {p.inspections.length > 0 && (
-        <section className="card">
-          <h2>Hasil pemeriksaan UDD</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>ID kantong</th>
-                <th>Keputusan</th>
-                <th>Catatan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {p.inspections.map((i) => (
-                <tr key={i.bag}>
-                  <td>{i.bag}</td>
-                  <td>
-                    <Tag v={i.result} />
-                  </td>
-                  <td>{i.reason || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </section>
       )}
       {p.orderId && (
