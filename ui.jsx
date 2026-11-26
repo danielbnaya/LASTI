@@ -13,6 +13,7 @@ const labels = {
   DONE: "Selesai",
   ALL_HELD: "Seluruh kantong ditahan",
   REJECTED: "Ditolak",
+  CANCELLED: "Dibatalkan",
   AVAILABLE: "Tersedia",
   RESERVED: "Direservasi",
   PENDING_INSPECTION: "Menunggu pemeriksaan",
@@ -43,7 +44,7 @@ function Tag({ v }) {
     <span
       className={
         "tag " +
-        (["ON_HOLD", "REJECTED", "ALL_HELD"].includes(v)
+        (["ON_HOLD", "REJECTED", "CANCELLED", "ALL_HELD"].includes(v)
           ? "bad"
           : ["SOURCE", "DEST", "FINAL", "INSPECTION", "RESERVED"].includes(v)
             ? "warn"
@@ -209,7 +210,7 @@ function App() {
   };
   const sum = (k) => data.metrics.reduce((s, m) => s + m[k], 0);
   const queue = data.plans.filter(
-    (p) => !["DONE", "REJECTED", "ALL_HELD"].includes(p.stage),
+    (p) => !["DONE", "REJECTED", "CANCELLED", "ALL_HELD"].includes(p.stage),
   );
   return (
     <div className="layout">
@@ -374,7 +375,8 @@ function App() {
     </div>
   );
 }
-function Plans({ plans, open }) {
+function Plans({ plans, open, onCancel, busy }) {
+  const [pending, setPending] = useState(null);
   return plans.length ? (
     plans.map((p) => (
       <div className="order" key={p.id}>
@@ -384,7 +386,37 @@ function Plans({ plans, open }) {
           <small>{p.bags.length} kantong · </small>
           <Tag v={p.stage} />
         </div>
-        <button onClick={() => open(p)}>Detail →</button>
+        <div className="row">
+          <button onClick={() => open(p)}>Detail →</button>
+          {onCancel &&
+            p.stage === "SOURCE" &&
+            !p.decisions.length &&
+            (pending === p.id ? (
+              <>
+                <button disabled={busy} onClick={() => setPending(null)}>
+                  Kembali
+                </button>
+                <button
+                  className="alertbtn"
+                  disabled={busy}
+                  onClick={() => {
+                    setPending(null);
+                    onCancel(p.id);
+                  }}
+                >
+                  Ya, batalkan {p.id}
+                </button>
+              </>
+            ) : (
+              <button
+                className="alertbtn"
+                disabled={busy}
+                onClick={() => setPending(p.id)}
+              >
+                Batalkan usulan
+              </button>
+            ))}
+        </div>
       </div>
     ))
   ) : (
@@ -620,6 +652,32 @@ function Prediction({ data, period, H, user, api, run, busy, reload }) {
 }
 function Redistribution({ api, user, run, busy, period, data, open, reload }) {
   const [pairs, A] = useState(null);
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    if (preview) document.getElementById("preview-title")?.focus();
+  }, [preview]);
+
+  async function search() {
+    setPreview(null);
+    A(await api("/prc-redistribution/recommendations?period=" + period));
+  }
+
+  function cancel(id) {
+    run(
+      async () => {
+        try {
+          await api(
+            "/prc-redistribution/plans/" + encodeURIComponent(id) + "/cancel",
+            "POST",
+          );
+        } finally {
+          await reload();
+        }
+      },
+      "Usulan " + id + " dibatalkan.",
+    );
+  }
   return (
     <>
       {user === U && (
@@ -629,15 +687,7 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
             <button
               className="primary"
               disabled={busy}
-              onClick={() =>
-                run(async () =>
-                  A(
-                    await api(
-                      "/prc-redistribution/recommendations?period=" + period,
-                    ),
-                  ),
-                )
-              }
+              onClick={() => run(search)}
             >
               Cari rekomendasi
             </button>
@@ -667,17 +717,8 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
                   </div>
                   <button
                     disabled={busy}
-                    onClick={() =>
-                      run(async () => {
-                        let p = await api(
-                          "/prc-redistribution/recommendations",
-                          "POST",
-                          r,
-                        );
-                        await reload();
-                        open(p);
-                      })
-                    }
+                    aria-expanded={preview === r}
+                    onClick={() => setPreview(r)}
                   >
                     Buat usulan
                   </button>
@@ -686,12 +727,68 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
             ))}
         </section>
       )}
+      {preview && (
+        <section className="card" aria-labelledby="preview-title">
+          <div className="cardhead">
+            <h2 id="preview-title" tabIndex={-1}>
+              Ringkasan kantong untuk redistribusi
+            </h2>
+            <small>{preview.bags.length} kantong</small>
+          </div>
+          <p>
+            {preview.sourceFacilityId} → {preview.destinationFacilityId}
+          </p>
+          <table className="space">
+            <thead>
+              <tr>
+                <th>ID kantong</th>
+                <th>Tanggal kedaluwarsa</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.bags.map((bag) => (
+                <tr key={bag.bloodBagId}>
+                  <td>{bag.bloodBagId}</td>
+                  <td>{bag.expiresAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="row space">
+            <button disabled={busy} onClick={() => setPreview(null)}>
+              Kembali ke rekomendasi
+            </button>
+            <button
+              className="primary"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  const plan = await api(
+                    "/prc-redistribution/recommendations",
+                    "POST",
+                    preview,
+                  );
+                  await reload();
+                  open(plan);
+                })
+              }
+            >
+              Konfirmasi buat usulan
+            </button>
+          </div>
+        </section>
+      )}
       <section className="card">
         <div className="cardhead">
           <h2>Daftar rencana</h2>
           <small>{data.plans.length} rencana</small>
         </div>
-        <Plans plans={data.plans} open={open} />
+        <Plans
+          plans={data.plans}
+          open={open}
+          busy={busy}
+          onCancel={user === U ? cancel : null}
+        />
       </section>
     </>
   );

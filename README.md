@@ -50,7 +50,7 @@ Data simulasi menggunakan tanggal tetap **25 November 2026**, satu kelompok PRC 
 | Langkah | Akun dan tindakan | Hasil yang dapat diperiksa |
 |---|---|---|
 | 1 | UDD-001 → Prediksi AI → BDRS-001 → Jalankan prediksi | Model memprediksi 25 kantong. Dengan 10 tersedia dan cadangan 5, kekurangannya 20. |
-| 2 | UDD-001 → Redistribusi → Cari rekomendasi → Buat usulan untuk **BDRS-002 → BDRS-001** | REC-0001 berisi PRC-0021 sampai PRC-0030. |
+| 2 | UDD-001 → Redistribusi → Cari rekomendasi → Buat usulan untuk **BDRS-002 → BDRS-001**. Periksa ringkasan kantong, lalu pilih **Konfirmasi buat usulan** | REC-0001 berisi PRC-0021 sampai PRC-0030. |
 | 3 | Ganti akun ke BDRS-002. Buka detail rencana dan pilih Setujui rencana. | Konfirmasi pelepasan tercatat. |
 | 4 | Ganti akun ke BDRS-001 dan setujui pada detail rencana. | Kesediaan menerima tercatat. |
 | 5 | Ganti akun ke UDD-001 dan setujui. | ORD-0001 dibuat. Sepuluh ID direservasi bersama, stok tersedia asal menjadi 25. Bukti blockchain pertama tersedia. |
@@ -58,6 +58,8 @@ Data simulasi menggunakan tanggal tetap **25 November 2026**, satu kelompok PRC 
 | 7 | Pada pemeriksaan, pilih Siap diteruskan untuk PRC-0021 hingga PRC-0029. Pilih Ditahan bagi PRC-0030, isi alasan simulasi, lalu Simpan hasil pemeriksaan. | Sembilan ID dapat diteruskan dan satu berada di UDD. |
 | 8 | Ganti akun ke BDRS-001, buka ORD-0001 lalu konfirmasi sembilan ID yang diterima. | Stok tersedia BDRS-001 menjadi 19. Bukti ketiga tersedia. |
 | 9 | Pada Riwayat blockchain, klik Verifikasi untuk masing-masing peristiwa. | Tiga receipt sukses, tiga hash transaksi berbeda. Setiap tombol membaca kembali bukti dari node Ethereum lokal. |
+
+Pada **Daftar rencana**, UDD dapat memilih **Batalkan usulan** sebelum ada keputusan dari pihak mana pun. Setelah dikonfirmasi, rencana tetap terlihat dengan status **Dibatalkan**.
 
 Angka 25/20/18 dihitung dari CSV oleh model. Perubahan persediaan, pemakaian, dan periode prediksi dapat mengubah rekomendasi.
 

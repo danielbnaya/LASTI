@@ -13,6 +13,8 @@ from service import (
     FACILITIES,
     UDD,
     approve,
+    bag_preview,
+    cancel_plan,
     create_plan,
     examine,
     getplan,
@@ -61,10 +63,16 @@ class Forecast(BaseModel):
     period: str = "30d"
 
 
+class PreviewBag(BaseModel):
+    bloodBagId: str
+    expiresAt: date
+
+
 class Proposal(BaseModel):
     sourceFacilityId: str
     destinationFacilityId: str
     period: str = "30d"
+    bags: list[PreviewBag] | None = Field(default=None, min_length=1)
 
 
 class Approval(BaseModel):
@@ -328,6 +336,7 @@ def recommendations(user: User, period: str = "30d"):
                                 sourceFacilityId=a,
                                 destinationFacilityId=b,
                                 bloodBagIds=bags,
+                                bags=bag_preview(c, bags),
                                 period=period,
                             )
                         )
@@ -338,10 +347,24 @@ def recommendations(user: User, period: str = "30d"):
 def proposal(body: Proposal, user: User):
     require(user == UDD, "Khusus UDD", 403)
     with db(True) as c:
+        reviewed = [bag.model_dump(mode="json") for bag in body.bags] if body.bags else None
         key = create_plan(
-            c, body.sourceFacilityId, body.destinationFacilityId, horizon(body.period)
+            c,
+            body.sourceFacilityId,
+            body.destinationFacilityId,
+            horizon(body.period),
+            reviewed,
         )
         return detail(c, getplan(c, key))
+
+
+@api.post("/prc-redistribution/plans/{plan_id}/cancel")
+def cancellation(plan_id: str, user: User):
+    require(user == UDD, "Pembatalan hanya dapat dilakukan oleh UDD", 403)
+    with db(True) as c:
+        plan = getplan(c, plan_id)
+        cancel_plan(c, plan)
+        return detail(c, getplan(c, plan_id))
 
 
 @api.post("/prc-redistribution/approvals")

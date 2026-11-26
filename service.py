@@ -110,13 +110,28 @@ def selected(c, origin, dest, horizon):
     return picked
 
 
-def create_plan(c, src, dst, h):
+def bag_preview(c, blood_bag_ids):
+    return rows(
+        c,
+        """SELECT bags.id AS bloodBagId, bags.expiry AS expiresAt
+           FROM json_each(?) AS chosen JOIN bags ON bags.id = chosen.value
+           ORDER BY chosen.key""",
+        (json.dumps(blood_bag_ids),),
+    )
+
+
+def create_plan(c, src, dst, h, reviewed_bags=None):
     require(
         src in FACILITIES and dst in FACILITIES and src != dst,
         "Pasangan fasilitas tidak valid",
         422,
     )
     bags = selected(c, src, dst, h)
+    if reviewed_bags is not None:
+        require(
+            reviewed_bags == bag_preview(c, bags),
+            "Daftar kantong berubah. Klik Cari rekomendasi lagi untuk meninjau daftar terbaru.",
+        )
     require(bags, "Tidak ada kantong yang memenuhi seluruh kriteria.")
     prior = c.execute(
         "SELECT id FROM plans WHERE src=? AND dst=? AND stage IN ('SOURCE','DEST','FINAL') AND bags=? AND horizon=?",
@@ -132,6 +147,22 @@ def create_plan(c, src, dst, h):
     )
     note(c, src, f"{key} menunggu keputusan pelepasan.")
     return key
+
+
+def cancel_plan(c, plan):
+    if plan["stage"] == "CANCELLED":
+        return
+
+    has_decision = c.execute(
+        "SELECT 1 FROM decisions WHERE plan=? LIMIT 1", (plan["id"],)
+    ).fetchone()
+    require(
+        plan["stage"] == "SOURCE" and not plan["orderId"] and not has_decision,
+        "Usulan hanya dapat dibatalkan sebelum ada keputusan dari pihak mana pun.",
+    )
+    c.execute("UPDATE plans SET stage='CANCELLED' WHERE id=?", (plan["id"],))
+    for facility in (UDD, plan["src"], plan["dst"]):
+        note(c, facility, f"{plan['id']} dibatalkan oleh UDD.")
 
 
 def enqueue(c, p, stage, actor, bags):
