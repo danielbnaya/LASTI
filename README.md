@@ -61,6 +61,16 @@ Data simulasi menggunakan tanggal tetap **25 November 2026**, satu kelompok PRC 
 
 Angka 25/20/18 dihitung dari CSV oleh model. Perubahan persediaan, pemakaian, dan periode prediksi dapat mengubah rekomendasi.
 
+## Stok tambahan untuk uji rekomendasi
+
+Dari PowerShell di folder proyek, jalankan perintah berikut satu kali:
+
+    .\.venv\Scripts\python.exe tambah_stok_demo.py
+
+Skrip menambahkan 30 kantong per BDRS ke database yang dipakai aplikasi. Data yang sudah ada, riwayat pemakaian, dan pesanan tetap tersimpan. Jika aplikasi sudah terbuka, muat ulang halaman. Dengan akun UDD-001 dan periode 30 hari, buka **Redistribusi → Cari rekomendasi**. Untuk melihat status dan kedaluwarsa, buka **Persediaan**, lalu pilih BDRS yang ingin diperiksa. Dataset tambahan mencakup kantong tersedia dengan sisa masa simpan 2–36 hari dan kantong dengan reservasi pasien. BDRS-001 mendapat lebih banyak stok berstatus reservasi pasien agar masih memiliki kebutuhan redistribusi.
+
+Demo utama dengan angka 10 kantong pada tabel sebelumnya memakai data awal sebelum stok tambahan diimpor. Rekomendasi setelah impor mengikuti stok, pemakaian, dan pesanan yang ada pada database lokal.
+
 ## Implementasi dan ruang lingkup
 
 - **AI** menggunakan regresi linear per fasilitas dengan fitur kategori hari dalam minggu. Koefisien per kategori dipelajari dari riwayat dengan solusi kuadrat terkecil berupa rata-rata pemakaian untuk hari tersebut. Implementasi memakai pustaka standar Python sehingga modul prediksi dapat dimuat tanpa DLL SciPy. Evaluasi kronologis membandingkan MAE model dengan MAE rata-rata historis pada 14 hari terakhir. Model operasional kemudian dilatih pada seluruh riwayat. MAE dan proyeksi harian terlihat pada menu Prediksi AI. Dataset sintetis dikalibrasi untuk skenario kelompok.
