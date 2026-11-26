@@ -32,10 +32,62 @@ const views = [
   "Redistribusi",
   "Notifikasi",
 ];
+const iconPaths = {
+  overview: "M3 3h7v7H3z M14 3h7v4h-7z M3 14h7v7H3z M14 11h7v10h-7z",
+  bag: "M7 4h10l2 3v10l-3 3H8l-3-3V7z M10 2v2m4-2v2M9 11h6m-3-3v6m0 6v2",
+  chart: "M3 3v17h18 M6 15l4-6 4 3 6-7",
+  route: "M3 7h16m-4-4 4 4-4 4 M21 17H5m4-4-4 4 4 4",
+  bell: "M5 16h14l-2-3V9a5 5 0 0 0-10 0v4z M10 20a2 2 0 0 0 4 0",
+  clock: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z M12 6v6l4 2",
+  facility: "M4 21V6h10v15m0-12h5v12M2 21h20M8 10h2m-2 4h2m-2 7v-3h2v3",
+  calendar: "M3 6h18v15H3z M7 3v6m10-6v6M3 11h18",
+  exit: "M10 4H4v16h6m2-12 4 4-4 4m-4-4h13",
+  layers: "M3 8l9-5 9 5-9 5z M3 12l9 5 9-5M3 16l9 5 9-5",
+};
+const viewIcons = ["overview", "bag", "chart", "route", "bell"];
+function Icon({ name }) {
+  return (
+    <svg
+      className="icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={iconPaths[name]} />
+    </svg>
+  );
+}
+function NetworkDiagram() {
+  return (
+    <div className="network-diagram" aria-hidden="true">
+      <div className="network-hub">
+        <span className="mark">✚</span>UDD
+      </div>
+      <div className="network-links" />
+      <div className="network-sites">
+        {F.map((f) => (
+          <div key={f}>
+            <Icon name="facility" />
+            <span>{f}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 function Brand() {
   return (
     <div className="brand">
-      <span className="mark">✚</span>PRC Connect
+      <span className="mark" aria-hidden="true">
+        ✚
+      </span>
+      <span>
+        PRC <em>Connect</em>
+      </span>
     </div>
   );
 }
@@ -46,7 +98,16 @@ function Tag({ v }) {
         "tag " +
         (["ON_HOLD", "REJECTED", "CANCELLED", "ALL_HELD"].includes(v)
           ? "bad"
-          : ["SOURCE", "DEST", "FINAL", "INSPECTION", "RESERVED"].includes(v)
+          : [
+                "SOURCE",
+                "DEST",
+                "FINAL",
+                "INSPECTION",
+                "RESERVED",
+                "PENDING_INSPECTION",
+                "Menunggu",
+                "PATIENT_RESERVED",
+              ].includes(v)
             ? "warn"
             : "")
       }
@@ -55,10 +116,13 @@ function Tag({ v }) {
     </span>
   );
 }
-function Stat({ title, value, sub }) {
+function Stat({ title, value, sub, icon, featured }) {
   return (
-    <div className="stat">
-      <small>{title}</small>
+    <div className={"stat" + (featured ? " featured" : "")}>
+      <div className="stat-title">
+        {title}
+        <Icon name={icon} />
+      </div>
       <strong>{value}</strong>
       <small>{sub}</small>
     </div>
@@ -165,38 +229,49 @@ function App() {
   if (!token || !data)
     return (
       <div className="login">
-        <div className="loginbox">
-          <Brand />
-          <h1>Masuk ke jejaring PRC</h1>
-          <p>
-            Kelola persediaan dan koordinasikan redistribusi antar fasilitas.
-          </p>
-          <form className="stack" onSubmit={login}>
-            <label>
-              Akun fasilitas
-              <select value={who} onChange={(e) => W(e.target.value)}>
-                {[U, ...F].map((f) => (
-                  <option key={f}>{f}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Kata sandi
-              <input
-                type="password"
-                value={pass}
-                onChange={(e) => Q(e.target.value)}
-                required
-              />
-            </label>
-            <button className="primary" disabled={busy}>
-              Masuk ke dashboard
-            </button>
-            <small>
-              Akun simulasi kelompok · Sandi awal <code>demo-prc</code>
-            </small>
-          </form>
-          {err && <div className="notice error">{err}</div>}
+        <div className="login-shell">
+          <div className="login-intro">
+            <Brand />
+            <NetworkDiagram />
+            <div>
+              <h2>Jejaring bank darah</h2>
+              <p>Koordinasi stok PRC antara UDD dan tiga BDRS.</p>
+            </div>
+          </div>
+          <div className="loginbox">
+            <h1>Masuk ke jejaring PRC</h1>
+            <p>Pilih akun fasilitas untuk membuka ruang kerja Anda.</p>
+            <form className="stack" onSubmit={login}>
+              <label>
+                Akun fasilitas
+                <select value={who} onChange={(e) => W(e.target.value)}>
+                  {[U, ...F].map((f) => (
+                    <option key={f}>{f}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Kata sandi
+                <input
+                  type="password"
+                  value={pass}
+                  onChange={(e) => Q(e.target.value)}
+                  required
+                />
+              </label>
+              <button className="primary" disabled={busy}>
+                Masuk ke dashboard
+              </button>
+              <small>
+                Akun simulasi kelompok · Sandi awal <code>demo-prc</code>
+              </small>
+            </form>
+            {err && (
+              <div role="alert" className="notice error">
+                {err}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -210,6 +285,10 @@ function App() {
     M("");
   };
   const sum = (k) => data.metrics.reduce((s, m) => s + m[k], 0);
+  const scale = Math.max(
+    1,
+    ...data.metrics.flatMap((m) => [m.currentStock, m.predictedDemand]),
+  );
   const queue = data.plans.filter(
     (p) => !["DONE", "REJECTED", "CANCELLED", "ALL_HELD"].includes(p.stage),
   );
@@ -217,30 +296,44 @@ function App() {
     <div className="layout">
       <aside className="sidebar">
         <Brand />
-        <nav>
+        <nav aria-label="Menu utama">
           {views.map((v, i) => (
             <button
               key={v}
+              aria-current={v === page ? "page" : undefined}
               className={"nav " + (v === page ? "active" : "")}
               onClick={() => go(v)}
             >
-              <span>{["▦", "▤", "∿", "⇆", "◷"][i]}</span>
+              <Icon name={viewIcons[i]} />
               {v}
             </button>
           ))}
         </nav>
         <div className="identity">
-          <b>{user}</b>
-          <small>
-            {user === U ? "Koordinator jejaring" : "Petugas bank darah"}
-          </small>
-          <button onClick={logout}>Ganti akun</button>
+          <div className="account-logo">
+            <Icon name="facility" />
+          </div>
+          <div className="account-text">
+            <b>{user}</b>
+            <small>
+              {user === U ? "Koordinator jejaring" : "Petugas bank darah"}
+            </small>
+          </div>
+          <button onClick={logout}>
+            <Icon name="exit" />
+            Ganti akun
+          </button>
         </div>
       </aside>
       <main className="main">
         <div className="top">
-          <b>Operasional / {page}</b>
-          <span>Simulasi · 25 November 2026</span>
+          <div className="crumb">
+            Operasional <span>/</span> <b>{page}</b>
+          </div>
+          <span className="sim-date">
+            <Icon name="calendar" />
+            Simulasi · 25 November 2026
+          </span>
         </div>
         <header>
           <h1>
@@ -279,16 +372,20 @@ function App() {
           <>
             <div className="grid">
               <Stat
+                featured
+                icon="bag"
                 title="Stok tersedia"
                 value={sum("currentStock")}
                 sub="kantong di BDRS"
               />
               <Stat
+                icon="clock"
                 title="Mendekati kedaluwarsa"
                 value={sum("near")}
                 sub="sisa masa simpan 5–14 hari"
               />
               <Stat
+                icon="route"
                 title="Rencana aktif"
                 value={queue.length}
                 sub="dalam proses koordinasi"
@@ -301,34 +398,73 @@ function App() {
                   Lihat prediksi →
                 </button>
               </div>
-              <table>
-                <thead>
-                  <tr>
-                    {[
-                      "Fasilitas",
-                      "Tersedia",
-                      "Prediksi " + period,
-                      "Surplus",
-                      "Kekurangan",
-                    ].map((x) => (
-                      <th key={x}>{x}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.metrics.map((m) => (
-                    <tr key={m.facilityId}>
-                      <td>
-                        <b>{m.facilityId}</b>
-                      </td>
-                      <td>{m.currentStock}</td>
-                      <td>{m.predictedDemand}</td>
-                      <td>{m.potentialSurplus}</td>
-                      <td>{m.potentialShortage}</td>
+              <div className="table-scroll">
+                <table className="stock-summary">
+                  <thead>
+                    <tr>
+                      {[
+                        "Fasilitas",
+                        "Tersedia",
+                        "Prediksi " + parseInt(period) + " hari",
+                        "Surplus",
+                        "Kekurangan",
+                      ].map((x) => (
+                        <th key={x}>{x}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.metrics.map((m) => (
+                      <tr key={m.facilityId}>
+                        <td>
+                          <span className="facility-id">
+                            <Icon name="facility" />
+                            {m.facilityId}
+                          </span>
+                        </td>
+                        {[m.currentStock, m.predictedDemand].map((n, i) => (
+                          <td
+                            key={i}
+                            data-label={
+                              i
+                                ? "Prediksi " + parseInt(period) + " hari"
+                                : "Tersedia"
+                            }
+                          >
+                            <span className="quantity">
+                              {n}
+                              <span
+                                aria-hidden="true"
+                                className={"meter meter-" + i}
+                              >
+                                <i style={{ width: (100 * n) / scale + "%" }} />
+                              </span>
+                            </span>
+                          </td>
+                        ))}
+                        <td data-label="Surplus">
+                          <span
+                            className={
+                              m.potentialSurplus ? "balance surplus" : "zero"
+                            }
+                          >
+                            {m.potentialSurplus}
+                          </span>
+                        </td>
+                        <td data-label="Kekurangan">
+                          <span
+                            className={
+                              m.potentialShortage ? "balance shortage" : "zero"
+                            }
+                          >
+                            {m.potentialShortage}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
             <section className="card">
               <div className="cardhead">
@@ -368,7 +504,10 @@ function App() {
                 ))}
               </ul>
             ) : (
-              <p className="muted space">Belum ada aktivitas tercatat.</p>
+              <div className="empty space">
+                <Icon name="bell" />
+                <p>Belum ada aktivitas tercatat.</p>
+              </div>
             )}
           </section>
         )}
@@ -421,10 +560,13 @@ function Plans({ plans, open, onCancel, busy }) {
       </div>
     ))
   ) : (
-    <p className="muted">
-      Belum ada rencana. Koordinator UDD dapat membuat usulan dari menu
-      Redistribusi.
-    </p>
+    <div className="empty">
+      <Icon name="route" />
+      <div>
+        <b>Belum ada rencana</b>
+        <p>Usulan dari koordinator UDD akan muncul di sini.</p>
+      </div>
+    </div>
   );
 }
 function Inventory({ user, api, run, reload, nonce, busy, E, M }) {
@@ -562,45 +704,49 @@ function Inventory({ user, api, run, reload, nonce, busy, E, M }) {
             </div>
           </div>
         )}
-        <table>
-          <thead>
-            <tr>
-              {["ID kantong", "Kedaluwarsa", "Status", "Pemakaian"].map((x) => (
-                <th key={x}>{x}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {bags
-              .filter((b) => b.id.includes(query.toUpperCase()))
-              .map((b) => (
-                <tr key={b.id}>
-                  <td>{b.id}</td>
-                  <td>{b.expiry}</td>
-                  <td>
-                    <Tag v={b.status} />
-                  </td>
-                  <td>
-                    {["AVAILABLE", "PATIENT_RESERVED"].includes(b.status) && (
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          run(async () => {
-                            await api(stock + "/prc-usage", "POST", {
-                              bloodBagIds: [b.id],
-                            });
-                            await reload();
-                          }, "Pemakaian tercatat.")
-                        }
-                      >
-                        Catat terpakai
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                {["ID kantong", "Kedaluwarsa", "Status", "Pemakaian"].map(
+                  (x) => (
+                    <th key={x}>{x}</th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {bags
+                .filter((b) => b.id.includes(query.toUpperCase()))
+                .map((b) => (
+                  <tr key={b.id}>
+                    <td>{b.id}</td>
+                    <td>{b.expiry}</td>
+                    <td>
+                      <Tag v={b.status} />
+                    </td>
+                    <td>
+                      {["AVAILABLE", "PATIENT_RESERVED"].includes(b.status) && (
+                        <button
+                          disabled={busy}
+                          onClick={() =>
+                            run(async () => {
+                              await api(stock + "/prc-usage", "POST", {
+                                bloodBagIds: [b.id],
+                              });
+                              await reload();
+                            }, "Pemakaian tercatat.")
+                          }
+                        >
+                          Catat terpakai
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </>
   );
@@ -650,16 +796,24 @@ function Prediction({ data, period, H, user, api, run, busy, reload }) {
       </section>
       <div className="grid space">
         <Stat
+          featured
+          icon="chart"
           title="Perkiraan pemakaian"
           value={m.predictedDemand}
-          sub={"kantong dalam " + period}
+          sub={"kantong dalam " + parseInt(period) + " hari"}
         />
         <Stat
+          icon="bag"
           title="Stok tersedia"
           value={m.currentStock}
           sub={"Kiriman masuk · " + m.incoming}
         />
-        <Stat title="Cadangan minimum" value="5" sub="kantong per BDRS" />
+        <Stat
+          icon="layers"
+          title="Cadangan minimum"
+          value="5"
+          sub="kantong per BDRS"
+        />
       </div>
       <section className="card">
         <h2>Prediksi harian · {m.facilityId}</h2>
@@ -765,7 +919,7 @@ function Redistribution({
             </button>
           </div>
           <p className="muted">
-            Periode {period} · FEFO · Cadangan minimum 5 kantong
+            Periode {parseInt(period)} hari · FEFO · Cadangan minimum 5 kantong
           </p>
           <small>
             Pasangan yang masih diproses dapat dilihat di Daftar rencana.
@@ -813,22 +967,24 @@ function Redistribution({
           <p>
             {preview.sourceFacilityId} → {preview.destinationFacilityId}
           </p>
-          <table className="space">
-            <thead>
-              <tr>
-                <th>ID kantong</th>
-                <th>Tanggal kedaluwarsa</th>
-              </tr>
-            </thead>
-            <tbody>
-              {preview.bags.map((bag) => (
-                <tr key={bag.bloodBagId}>
-                  <td>{bag.bloodBagId}</td>
-                  <td>{bag.expiresAt}</td>
+          <div className="table-scroll space">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID kantong</th>
+                  <th>Tanggal kedaluwarsa</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {preview.bags.map((bag) => (
+                  <tr key={bag.bloodBagId}>
+                    <td>{bag.bloodBagId}</td>
+                    <td>{bag.expiresAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <div className="row space">
             <button disabled={busy} onClick={() => setPreview(null)}>
               Kembali ke rekomendasi
@@ -1057,26 +1213,28 @@ function Detail({ p, user, api, run, reload, busy, back, M }) {
       {p.inspections.length > 0 && (
         <section className="card">
           <h2>Hasil pemeriksaan UDD</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>ID kantong</th>
-                <th>Keputusan</th>
-                <th>Catatan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {p.inspections.map((i) => (
-                <tr key={i.bag}>
-                  <td>{i.bag}</td>
-                  <td>
-                    <Tag v={i.result} />
-                  </td>
-                  <td>{i.reason || "—"}</td>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID kantong</th>
+                  <th>Keputusan</th>
+                  <th>Catatan</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {p.inspections.map((i) => (
+                  <tr key={i.bag}>
+                    <td>{i.bag}</td>
+                    <td>
+                      <Tag v={i.result} />
+                    </td>
+                    <td>{i.reason || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
       {p.receiptReports?.length > 0 && (
@@ -1183,42 +1341,48 @@ function Detail({ p, user, api, run, reload, busy, back, M }) {
           <p className="muted space">
             Konfirmasi hasil pemeriksaan untuk setiap kantong.
           </p>
-          <table>
-            <thead>
-              <tr>
-                <th>Kantong</th>
-                <th>Hasil</th>
-                <th>Alasan ditahan</th>
-              </tr>
-            </thead>
-            <tbody>
-              {p.bags.map((b) => (
-                <tr key={b}>
-                  <td>{b}</td>
-                  <td>
-                    <select
-                      aria-label={"Hasil " + b}
-                      value={held[b] || ""}
-                      onChange={(e) => H({ ...held, [b]: e.target.value })}
-                    >
-                      <option value="">Pilih hasil</option>
-                      <option value="READY_TO_FORWARD">Siap diteruskan</option>
-                      <option value="ON_HOLD">Ditahan</option>
-                    </select>
-                  </td>
-                  <td>
-                    {held[b] === "ON_HOLD" && (
-                      <input
-                        aria-label={"Alasan " + b}
-                        value={reasons[b] || ""}
-                        onChange={(e) => Y({ ...reasons, [b]: e.target.value })}
-                      />
-                    )}
-                  </td>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Kantong</th>
+                  <th>Hasil</th>
+                  <th>Alasan ditahan</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {p.bags.map((b) => (
+                  <tr key={b}>
+                    <td>{b}</td>
+                    <td>
+                      <select
+                        aria-label={"Hasil " + b}
+                        value={held[b] || ""}
+                        onChange={(e) => H({ ...held, [b]: e.target.value })}
+                      >
+                        <option value="">Pilih hasil</option>
+                        <option value="READY_TO_FORWARD">
+                          Siap diteruskan
+                        </option>
+                        <option value="ON_HOLD">Ditahan</option>
+                      </select>
+                    </td>
+                    <td>
+                      {held[b] === "ON_HOLD" && (
+                        <input
+                          aria-label={"Alasan " + b}
+                          value={reasons[b] || ""}
+                          onChange={(e) =>
+                            Y({ ...reasons, [b]: e.target.value })
+                          }
+                        />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <button
             className="primary space"
             disabled={busy}
@@ -1264,6 +1428,9 @@ function Detail({ p, user, api, run, reload, busy, back, M }) {
               </div>
               {e.tx ? (
                 <button
+                  className={
+                    verified[e.id] === "Bukti berbeda" ? "alertbtn" : ""
+                  }
                   disabled={busy}
                   onClick={() =>
                     run(async () => {
