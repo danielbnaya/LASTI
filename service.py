@@ -120,11 +120,27 @@ def bag_preview(c, blood_bag_ids):
     )
 
 
+def active_routes(c):
+    return {
+        (plan["src"], plan["dst"]): plan["id"]
+        for plan in c.execute(
+            """SELECT src, dst, id FROM plans
+               WHERE stage NOT IN ('DONE', 'REJECTED', 'CANCELLED', 'ALL_HELD')
+               ORDER BY rowid"""
+        )
+    }
+
+
 def create_plan(c, src, dst, h, reviewed_bags=None):
     require(
         src in FACILITIES and dst in FACILITIES and src != dst,
         "Pasangan fasilitas tidak valid",
         422,
+    )
+    active = active_routes(c).get((src, dst))
+    require(
+        active is None,
+        f"Rencana {active} masih aktif untuk pasangan ini. Buka Daftar rencana.",
     )
     bags = selected(c, src, dst, h)
     if reviewed_bags is not None:
@@ -133,12 +149,6 @@ def create_plan(c, src, dst, h, reviewed_bags=None):
             "Daftar kantong berubah. Klik Cari rekomendasi lagi untuk meninjau daftar terbaru.",
         )
     require(bags, "Tidak ada kantong yang memenuhi seluruh kriteria.")
-    prior = c.execute(
-        "SELECT id FROM plans WHERE src=? AND dst=? AND stage IN ('SOURCE','DEST','FINAL') AND bags=? AND horizon=?",
-        (src, dst, json.dumps(bags), h),
-    ).fetchone()
-    if prior:
-        return prior[0]
     n = c.execute("SELECT COUNT(*) FROM plans").fetchone()[0] + 1
     key = f"REC-{n:04}"
     c.execute(

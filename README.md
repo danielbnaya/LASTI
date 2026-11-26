@@ -59,7 +59,7 @@ Data simulasi menggunakan tanggal tetap **25 November 2026**, satu kelompok PRC 
 | 8 | Ganti akun ke BDRS-001, buka ORD-0001 lalu konfirmasi sembilan ID yang diterima. | Stok tersedia BDRS-001 menjadi 19. Bukti ketiga tersedia. |
 | 9 | Pada Riwayat blockchain, klik Verifikasi untuk masing-masing peristiwa. | Tiga receipt sukses, tiga hash transaksi berbeda. Setiap tombol membaca kembali bukti dari node Ethereum lokal. |
 
-Pada **Daftar rencana**, UDD dapat memilih **Batalkan usulan** sebelum ada keputusan dari pihak mana pun. Setelah dikonfirmasi, rencana tetap terlihat dengan status **Dibatalkan**.
+Pada **Daftar rencana**, UDD dapat memilih **Batalkan usulan** sebelum ada keputusan dari pihak mana pun. Setelah dikonfirmasi, rencana tetap terlihat dengan status **Dibatalkan**. Pencarian menampilkan pasangan asal dan tujuan yang belum memiliki rencana aktif. Setelah rencana selesai, ditolak, atau dibatalkan, pasangan dapat muncul kembali jika memenuhi aturan stok.
 
 Angka 25/20/18 dihitung dari CSV oleh model. Perubahan persediaan, pemakaian, dan periode prediksi dapat mengubah rekomendasi.
 

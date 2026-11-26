@@ -79,6 +79,7 @@ function App() {
   async function api(path, method = "GET", body, auth = token) {
     const r = await fetch(base + path, {
       method,
+      cache: "no-store",
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer " + auth,
@@ -660,6 +661,7 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
 
   async function search() {
     setPreview(null);
+    A(null);
     A(await api("/prc-redistribution/recommendations?period=" + period));
   }
 
@@ -695,10 +697,13 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
           <p className="muted">
             Periode {period} · FEFO · Cadangan minimum 5 kantong
           </p>
+          <small>
+            Pasangan yang masih diproses dapat dilihat di Daftar rencana.
+          </small>
           {pairs &&
             (!pairs.length ? (
               <p className="space">
-                Belum ada pasangan yang memenuhi kriteria.
+                Belum ada pasangan baru yang memenuhi kriteria.
               </p>
             ) : (
               pairs.map((r) => (

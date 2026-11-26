@@ -12,6 +12,7 @@ from service import (
     DAY,
     FACILITIES,
     UDD,
+    active_routes,
     approve,
     bag_preview,
     cancel_plan,
@@ -324,12 +325,14 @@ def surplus(user: User, period: str = "30d"):
 @api.get("/prc-redistribution/recommendations")
 def recommendations(user: User, period: str = "30d"):
     require(user == UDD, "Khusus UDD", 403)
+    days = horizon(period)
     with db() as c:
+        active = active_routes(c)
         pairs = []
         for a in FACILITIES:
             for b in FACILITIES:
-                if a != b:
-                    bags = selected(c, a, b, horizon(period))
+                if a != b and (a, b) not in active:
+                    bags = selected(c, a, b, days)
                     if bags:
                         pairs.append(
                             dict(
