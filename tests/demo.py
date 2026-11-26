@@ -236,6 +236,95 @@ def test_workflow():
         for e in summary["plans"][0]["events"]:
             print(e["id"], e["tx"])
 
+        # Campurkan satu pesanan selesai, satu pesanan yang masih mereservasi
+        # kantong, satu usulan dibatalkan, dan satu usulan ditolak.
+        key = req(
+            "POST",
+            create,
+            UDD,
+            dict(sourceFacilityId=third, destinationFacilityId=dest, period="30d"),
+        )["id"]
+        decision(third, "SOURCE_CONFIRMATION")
+        decision(dest, "DESTINATION_CONFIRMATION")
+        pending = decision(UDD, "UDD_FINAL_APPROVAL")
+        check(
+            "Ada kantong yang masih direservasi sebelum reset",
+            pending["stage"] == "TO_UDD",
+        )
+        old_event_ids = {
+            item["id"] for item in pending["events"] + summary["plans"][0]["events"]
+        }
+        with db(True) as c:
+            # Simulasi database pengguna yang dibuat sebelum pembaruan.
+            c.execute("DELETE FROM settings WHERE name='last_plan_number'")
+        req(
+            "PUT", f"/facilities/{dest}/prc-stock", dest,
+            {
+                "bags": [{
+                    "bloodBagId": "PRC-7777",
+                    "expiresAt": "2026-12-30",
+                    "status": "PATIENT_RESERVED",
+                }],
+            },
+        )
+        usage_path = f"/facilities/{dest}/prc-usage-history"
+        usage_before = req("GET", usage_path, dest)
+        reset_path = "/prc-redistribution/reset"
+        req("POST", reset_path, dest, status=403)
+        result = req("POST", reset_path, UDD)
+        after = req("GET", "/dashboard", UDD)
+        check(
+            "Reset mengosongkan rencana dan mengembalikan persediaan simulasi",
+            result["removedPlans"] == 4
+            and result["restoredBags"] == len(bags) + len(pending["bags"])
+            and not after["plans"]
+            and [v["currentStock"] for v in after["metrics"]] == [10, 35, 28],
+        )
+        check(
+            "Reset menjaga stok yang ditambahkan sendiri dan riwayat pemakaian",
+            req("GET", usage_path, dest) == usage_before
+            and any(
+                b["id"] == "PRC-7777" and b["status"] == "PATIENT_RESERVED"
+                for b in req("GET", f"/facilities/{dest}/prc-stock", dest)
+            ),
+        )
+        check(
+            "Reset dapat dijalankan lagi pada daftar kosong",
+            req("POST", reset_path, UDD) == {"removedPlans": 0, "restoredBags": 0},
+        )
+        with db() as c:
+            check(
+                "Catatan proses lama hilang, sementara catatan stok tetap ada",
+                all(
+                    not c.execute(f"SELECT 1 FROM {table}").fetchone()
+                    for table in ("plans", "events", "decisions", "inspections")
+                )
+                and [r["message"] for r in c.execute("SELECT message FROM notes")]
+                == ["1 data kantong disimpan"],
+            )
+        rec = next(item for item in req("GET", create, UDD) if item["sourceFacilityId"] == src)
+        new = req("POST", create, UDD, rec)
+        key = new["id"]
+        check("Rekomendasi sebelum pengujian kembali tersedia", new["bags"] == bags)
+        decision(src, "SOURCE_CONFIRMATION")
+        decision(dest, "DESTINATION_CONFIRMATION")
+        order = decision(UDD, "UDD_FINAL_APPROVAL")["orderId"]
+        move(UDD, "SOURCE_TO_UDD", bags)
+        req(
+            "POST", "/prc-redistribution/inspections", UDD,
+            dict(orderId=order, items=items),
+        )
+        repeat = move(dest, "UDD_TO_DESTINATION", bags[:-1])
+        check(
+            "Pengujian ulang menghasilkan semua bukti blockchain dengan ID baru",
+            len(repeat["events"]) == 3
+            and all(
+                e["id"] not in old_event_ids
+                and req("GET", "/ledger/verify/" + e["id"], UDD)["verified"]
+                for e in repeat["events"]
+            ),
+        )
+
 
 if __name__ == "__main__":
     test_workflow()
