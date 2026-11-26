@@ -676,6 +676,7 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
         } finally {
           await reload();
         }
+        await search();
       },
       "Usulan " + id + " dibatalkan.",
     );
