@@ -84,6 +84,24 @@ def test_workflow():
             bags == [f"PRC-{i:04}" for i in range(21, 31)],
         )
 
+        def recommendation_sources():
+            return {
+                item["sourceFacilityId"]
+                for item in req("GET", create, UDD)
+                if item["destinationFacilityId"] == dest
+            }
+
+        check(
+            "Pencarian ulang menyembunyikan pasangan aktif dan tetap menawarkan rute lain",
+            src not in recommendation_sources() and third in recommendation_sources(),
+        )
+        req("POST", create, UDD, rec, 409)
+        req("POST", create, UDD, {**rec, "period": "14d"}, 409)
+        check(
+            "Pembuatan ulang pasangan aktif ditolak meskipun periode berbeda",
+            len(req("GET", "/dashboard", UDD)["plans"]) == 1,
+        )
+
         def decision(who, step, dec="APPROVED", expected=200, reason=""):
             return req(
                 "POST",
@@ -103,6 +121,10 @@ def test_workflow():
         decision(dest, "DESTINATION_CONFIRMATION")
         p = decision(UDD, "UDD_FINAL_APPROVAL")
         order = p["orderId"]
+        check(
+            "Pesanan yang sedang diproses tidak direkomendasikan ulang",
+            src not in recommendation_sources(),
+        )
         decision(UDD, "UDD_FINAL_APPROVAL")
         check(
             "Persetujuan berurutan dan percobaan ulang menghasilkan satu bukti",
@@ -185,6 +207,10 @@ def test_workflow():
         canceled = req("POST", cancel, UDD)
         req("POST", cancel, UDD)
         decision(third, "SOURCE_CONFIRMATION", expected=409)
+        check(
+            "Pasangan yang dibatalkan kembali tersedia jika stok memenuhi syarat",
+            third in recommendation_sources(),
+        )
         check(
             "Pembatalan UDD tercatat tanpa mengubah kantong dan dapat diulang",
             canceled["stage"] == "CANCELLED"
