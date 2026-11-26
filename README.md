@@ -1,114 +1,128 @@
-# PRC Connect · Prototipe D3 II3120
+# PRC Connect
 
-Aplikasi web lokal untuk simulasi prediksi pemakaian dan redistribusi PRC. Satu akun UDD dan tiga akun BDRS menggunakan dashboard, REST API, model regresi, SQLite, dan smart contract Solidity.
+PRC Connect adalah prototipe akademik untuk **Deliverable 3 II3120**. Aplikasi ini membantu satu Unit Donor Darah (UDD) dan tiga Bank Darah Rumah Sakit (BDRS) melihat persediaan *packed red cells* (PRC), memperkirakan pemakaian, dan mengoordinasikan redistribusi antar fasilitas.
 
-## Menjalankan di Windows lewat PowerShell
+## Fitur
 
-Buka PowerShell dari folder proyek yang berisi start.py dan package.json. Jika memakai lokasi kelompok, jalankan:
+- **Persediaan PRC.** Catat stok, kedaluwarsa, reservasi pasien, dan pemakaian per kantong.
+- **Prediksi AI.** Regresi linear memperkirakan pemakaian per BDRS untuk 7, 14, atau 30 hari dari riwayat harian. Dashboard menampilkan rentang tanggal, prediksi harian, dan evaluasi MAE.
+- **Redistribusi.** UDD meninjau rekomendasi dan daftar kantong. Persetujuan berjalan dari BDRS asal ke BDRS tujuan, lalu ke UDD. Rute pengiriman melewati UDD untuk pemeriksaan per kantong sebelum diteruskan.
+- **Notifikasi dan bukti blockchain.** Aplikasi menampilkan aktivitas fasilitas, laporan ketidaksesuaian, dan bukti yang dapat diverifikasi untuk persetujuan akhir dan kedua serah terima.
 
-    Set-Location 'C:\Project\LASTI'
-    py --list
-    node --version
+## Mulai cepat
 
-Jika .\.venv\Scripts\python.exe sudah tersedia, pakai lingkungan itu. Untuk pemasangan baru, contoh di bawah memakai Python 3.12 dan Node.js 22 LTS. Jalankan perintah berikut satu per satu untuk pemasangan pertama. Tunggu tiap perintah selesai. Jika salah satunya gagal, periksa pesan error di terminal sebelum melanjutkan.
+Prasyaratnya adalah Git, Python 3.12, dan Node.js 22 LTS beserta npm.
 
-    py -3.12 -m venv .venv
-    .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-    npm.cmd ci
+### Windows (PowerShell)
 
-Setiap kali akan menjalankan aplikasi:
+Untuk instalasi pertama dari folder proyek baru:
 
-    .\.venv\Scripts\python.exe start.py
+```powershell
+git clone https://github.com/danielbnaya/LASTI.git
+cd LASTI
+```
 
-Tunggu sampai PowerShell menampilkan **Uvicorn running on http://127.0.0.1:8000**, lalu buka **http://127.0.0.1:8000** pada laptop yang sama. Gunakan akun UDD-001 dan sandi demo-prc. Biarkan terminal tetap terbuka. Tekan Ctrl+C setelah demo selesai.
+Jika repo sudah ada, langsung masuk ke folder salinanmu, misalnya `Set-Location 'C:\Project\LASTIII'`. Dari folder repo, jalankan satu per satu:
 
-### Jika browser menampilkan “This site can’t be reached”
+```powershell
+py --list
+node --version
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+npm.cmd ci
+```
 
-- Jika terminal kembali ke prompt sebelum baris Uvicorn muncul, startup gagal. Baca pesan terakhir. Untuk error Hardhat, buka 25 baris terakhir log dengan perintah di bawah.
-- Jika port 8000 sedang dipakai, jalankan server dengan port berbeda dan buka alamat yang ditampilkan. Port 8545 dipakai oleh blockchain lokal.
-- Saat server berjalan, periksa respons dari PowerShell kedua. Status 200 menunjukkan dashboard dapat diakses dari laptop itu.
+Jika Python 3.12 tidak muncul di `py --list`, instal Python 3.12 atau gunakan `py -m venv .venv` untuk memakai Python yang sudah tersedia.
 
-    Get-Content .\data\hardhat.log -Tail 25
-    # Alternatif saat port dashboard sedang dipakai
-    .\.venv\Scripts\python.exe start.py --port 8001
-    # Tes dari terminal kedua (sesuaikan port)
-    (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/).StatusCode
+Untuk menjalankan aplikasi dari folder repo:
 
-Di macOS/Linux:
+```powershell
+.\.venv\Scripts\python.exe start.py
+```
 
-    python3 -m venv .venv
-    .venv/bin/python -m pip install -r requirements.txt
-    npm ci
-    .venv/bin/python start.py
+### macOS dan Linux
 
-Peluncur memakai port 8000 untuk aplikasi dan 8545 untuk Hardhat. Tampilan React sudah dibangun di folder web. Setelah mengubah ui.jsx, jalankan **npm run build**.
+```bash
+git clone https://github.com/danielbnaya/LASTI.git
+cd LASTI
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+npm ci
+.venv/bin/python start.py
+```
 
-## Demo utama
+`start.py` menyiapkan node Hardhat dan kontrak lokal. Tunggu pesan **Uvicorn running on** sebelum membuka [dashboard](http://127.0.0.1:8000). Biarkan terminal terbuka selama demo dan tekan `Ctrl+C` untuk berhenti. Hasil build React sudah disertakan, sehingga aplikasi dapat langsung dijalankan setelah dependensi terpasang.
 
-Data simulasi menggunakan tanggal tetap **25 November 2026**, satu kelompok PRC O+, dan riwayat 60 hari untuk setiap BDRS. Mulai dengan data awal dan horizon **30 hari**.
+### Akun demo
 
-| Langkah | Akun dan tindakan | Hasil yang dapat diperiksa |
-|---|---|---|
-| 1 | UDD-001 → Prediksi AI → BDRS-001 → Jalankan prediksi | Model memprediksi 25 kantong. Dengan 10 tersedia dan cadangan 5, kekurangannya 20. |
-| 2 | UDD-001 → Redistribusi → Cari rekomendasi → Buat usulan untuk **BDRS-002 → BDRS-001**. Periksa ringkasan kantong, lalu pilih **Konfirmasi buat usulan** | REC-0001 berisi PRC-0021 sampai PRC-0030. |
-| 3 | Ganti akun ke BDRS-002. Buka detail rencana dan pilih Setujui rencana. | Konfirmasi pelepasan tercatat. |
-| 4 | Ganti akun ke BDRS-001 dan setujui pada detail rencana. | Kesediaan menerima tercatat. |
-| 5 | Ganti akun ke UDD-001 dan setujui. | ORD-0001 dibuat. Sepuluh ID direservasi bersama, stok tersedia asal menjadi 25. Bukti blockchain pertama tersedia. |
-| 6 | Pada pesanan yang sama, isi sepuluh ID penerimaan, atau pilih Isi daftar untuk simulasi, lalu Konfirmasi penerimaan. | Sepuluh kantong berada di UDD dan menunggu pemeriksaan. Bukti kedua tersedia. |
-| 7 | Pada pemeriksaan, pilih Siap diteruskan untuk PRC-0021 hingga PRC-0029. Pilih Ditahan bagi PRC-0030, isi alasan simulasi, lalu Simpan hasil pemeriksaan. | Sembilan ID dapat diteruskan dan satu berada di UDD. |
-| 8 | Ganti akun ke BDRS-001, buka ORD-0001, tinjau hasil pemeriksaan UDD, pilih **Kiriman sesuai**, lalu konfirmasi sembilan ID yang diterima. | Stok tersedia BDRS-001 menjadi 19. Bukti ketiga tersedia. |
-| 9 | Pada Riwayat blockchain, klik Verifikasi untuk masing-masing peristiwa. | Tiga receipt sukses, tiga hash transaksi berbeda. Setiap tombol membaca kembali bukti dari node Ethereum lokal. |
+| Akun | Peran |
+| --- | --- |
+| `UDD-001` | Koordinator rekomendasi, pemberi persetujuan akhir, dan pemeriksa kantong di UDD |
+| `BDRS-001`, `BDRS-002`, `BDRS-003` | Petugas BDRS sesuai fasilitas yang dipilih |
 
-Pada **Daftar rencana**, UDD dapat memilih **Batalkan usulan** sebelum ada keputusan dari pihak mana pun. Setelah dikonfirmasi, rencana terlihat dengan status **Dibatalkan** dan hasil rekomendasi diperbarui otomatis berdasarkan stok terbaru. Pencarian menampilkan pasangan asal dan tujuan yang belum memiliki rencana aktif. Setelah rencana selesai, ditolak, atau dibatalkan, pasangan dapat muncul kembali jika memenuhi aturan stok.
+Sandi awal semua akun simulasi adalah `demo-prc`. Gunakan tombol **Ganti akun** untuk berpindah peran selama demo.
 
-Jika kiriman bermasalah, BDRS tujuan memilih **Ada ketidaksesuaian**. Masukkan daftar ID yang benar-benar tiba, ID tambahan yang bermasalah bila ada, dan alasannya. Sistem otomatis mencatat selisih dengan daftar kantong yang lolos pemeriksaan UDD. UDD mendapatkan notifikasi dan dapat melihat laporan di detail pesanan. Stok penerima baru bertambah setelah tindak lanjut dan konfirmasi kiriman sesuai. Laporan tersimpan di aplikasi, dan transaksi blockchain tahap kedua dicatat saat penerimaan dikonfirmasi.
+## Demo redistribusi
 
-Angka 25/20/18 dihitung dari CSV oleh model. Perubahan persediaan, pemakaian, dan periode prediksi dapat mengubah rekomendasi.
+Contoh ini memakai stok awal, tanggal simulasi **25 November 2026**, dan horizon **30 hari**.
 
-### Mengulang pengujian redistribusi
+| Langkah | Tindakan | Hasil yang dapat diperiksa |
+| --- | --- | --- |
+| 1 | Sebagai **UDD-001**, buka **Prediksi AI** untuk BDRS-001 dan jalankan prediksi. | Perkiraan pemakaian 25 kantong. Dengan stok 10 dan cadangan 5, potensi kekurangan adalah 20 kantong. |
+| 2 | Di **Redistribusi**, pilih **Cari rekomendasi**, lalu **Buat usulan** untuk BDRS-002 → BDRS-001. Tinjau daftar kantong, lalu konfirmasi usulan. | Usulan memuat 10 kantong, PRC-0021 hingga PRC-0030. |
+| 3 | Di detail rencana, setujui secara berurutan sebagai **BDRS-002**, **BDRS-001**, dan **UDD-001**. | Pesanan dibuat, kantong direservasi, dan persetujuan akhir tercatat di blockchain. |
+| 4 | Sebagai **UDD-001**, isi ID kantong yang tiba atau pilih **Isi daftar untuk simulasi**, lalu konfirmasi penerimaan. | Sepuluh kantong masuk tahap pemeriksaan UDD dan bukti serah terima pertama tercatat. |
+| 5 | Di pemeriksaan UDD, tandai PRC-0021 hingga PRC-0029 siap diteruskan. Tahankan PRC-0030 dengan alasan simulasi. | Sembilan kantong dapat diteruskan dan satu ditahan di UDD. |
+| 6 | Sebagai **BDRS-001**, buka pesanan, pilih **Kiriman sesuai**, lalu konfirmasi sembilan ID yang tiba. | Stok tersedia penerima menjadi 19 kantong dan bukti serah terima kedua tercatat. |
+| 7 | Di **Riwayat blockchain**, klik **Verifikasi** untuk tiap peristiwa. | Tiga peristiwa memiliki hash transaksi terpisah dan dapat diverifikasi dari node lokal. |
 
-Masuk sebagai **UDD-001**, buka **Redistribusi → Daftar rencana → Reset data redistribusi**, lalu pilih **Ya, reset redistribusi**. Daftar rencana aktif dan riwayat redistribusi di aplikasi akan dikosongkan. Kantong yang sudah dipindahkan, dikunci, atau ditahan dalam pengujian kembali ke fasilitas asal dengan status tersedia. Kantong yang sudah dicatat terpakai atau dicadangkan untuk pasien tetap mengikuti catatan persediaan terakhir. Data stok yang ditambahkan sendiri dan riwayat pemakaian tetap tersimpan.
+Untuk menguji jalur lain:
 
-Aplikasi menghitung ulang rekomendasi menggunakan stok setelah reset. Nomor usulan dan pesanan berikutnya melanjutkan urutan sebelumnya untuk menjaga ID transaksi tetap unik. Bukti yang sudah tercatat di blockchain tetap berada di ledger lokal.
+- **Batalkan usulan.** UDD dapat membatalkan sebelum ada keputusan pertama. Pasangan asal dan tujuan dapat muncul kembali pada rekomendasi jika memenuhi kriteria stok.
+- **Laporkan ketidaksesuaian.** BDRS tujuan dapat memilih **Ada ketidaksesuaian**, mencatat ID yang tiba, dan memberi alasan. Laporan terlihat oleh UDD. Stok penerima bertambah setelah kiriman berhasil dikonfirmasi.
 
-### Reset stok darah simulasi
+## Data simulasi
 
-Masuk sebagai **UDD-001**, buka **Persediaan → Daftar kantong → Reset stok darah**, lalu konfirmasi. Reset berlaku untuk seluruh fasilitas. Stok kembali menjadi **73 kantong awal** (BDRS-001 sebanyak 10, BDRS-002 sebanyak 35, dan BDRS-003 sebanyak 28). Kantong manual, stok demo tambahan, perubahan status persediaan, dan usulan atau pesanan redistribusi di aplikasi terhapus. Riwayat pemakaian untuk AI dan bukti transaksi pada blockchain tetap tersimpan. Untuk menambahkan kembali 90 kantong uji, jalankan skrip pada bagian berikutnya.
+Data awal berisi 73 kantong PRC O+ dan 60 hari riwayat pemakaian sintetis per BDRS. SQLite disimpan di `data/prc.sqlite`. Folder `data/` juga memuat konfigurasi kontrak dan jurnal transaksi blockchain lokal. Simpan folder ini sebagai satu kesatuan jika ingin mengarsipkan demo.
 
-## Stok tambahan untuk uji rekomendasi
+| Aksi UDD | Dampak |
+| --- | --- |
+| **Redistribusi → Reset data redistribusi** | Mengosongkan daftar rencana dan pesanan serta mengembalikan kantong yang terdampak ke fasilitas asal selama belum terpakai atau dicadangkan untuk pasien. |
+| **Persediaan → Reset stok darah** | Mengembalikan 73 kantong awal dan menghapus stok tambahan serta daftar redistribusi di aplikasi. |
 
-Dari PowerShell di folder proyek, jalankan perintah berikut satu kali:
+Kedua reset mempertahankan riwayat pemakaian dan bukti yang sudah tercatat di blockchain. Untuk menambah 30 kantong uji per BDRS, jalankan skrip berikut dari PowerShell dan muat ulang aplikasi:
 
-    .\.venv\Scripts\python.exe tambah_stok_demo.py
+```powershell
+.\.venv\Scripts\python.exe tambah_stok_demo.py
+```
 
-Skrip menambahkan 30 kantong per BDRS ke database yang dipakai aplikasi. Data yang sudah ada, riwayat pemakaian, dan pesanan tetap tersimpan. Jika aplikasi sudah terbuka, muat ulang halaman. Dengan akun UDD-001 dan periode 30 hari, buka **Redistribusi → Cari rekomendasi**. Untuk melihat status dan kedaluwarsa, buka **Persediaan**, lalu pilih BDRS yang ingin diperiksa. Dataset tambahan mencakup kantong tersedia dengan sisa masa simpan 2–36 hari dan kantong dengan reservasi pasien. BDRS-001 mendapat lebih banyak stok berstatus reservasi pasien agar masih memiliki kebutuhan redistribusi.
+## Arsitektur dan pengembangan
 
-Demo utama dengan angka 10 kantong pada tabel sebelumnya memakai data awal sebelum stok tambahan diimpor. Rekomendasi setelah impor mengikuti stok, pemakaian, dan pesanan yang ada pada database lokal.
+| Lokasi | Fungsi |
+| --- | --- |
+| `ui.jsx`, `web/` | Antarmuka React, CSS, dan hasil build |
+| `app.py`, `service.py`, `database.py` | FastAPI, aturan redistribusi, dan penyimpanan SQLite |
+| `forecast.py`, `fixtures/usage.csv` | Model regresi berdasarkan hari dalam minggu dan data sintetis |
+| `chain/`, `ledger.py`, `hardhat.config.cjs` | Kontrak Solidity, node lokal, pencatatan dan verifikasi bukti |
+| `start.py`, `tests/demo.py` | Peluncur aplikasi dan uji integrasi |
 
-## Implementasi dan ruang lingkup
+[Dokumentasi API interaktif](http://127.0.0.1:8000/docs) tersedia saat aplikasi berjalan. Setelah mengubah `ui.jsx`, bangun ulang frontend dengan `npm.cmd run build` di PowerShell atau `npm run build` di macOS/Linux.
 
-- **AI** menggunakan regresi linear per fasilitas dengan fitur kategori hari dalam minggu. Koefisien per kategori dipelajari dari riwayat dengan solusi kuadrat terkecil berupa rata-rata pemakaian untuk hari tersebut. Implementasi memakai pustaka standar Python sehingga modul prediksi dapat dimuat tanpa DLL SciPy. Evaluasi kronologis membandingkan MAE model dengan MAE rata-rata historis pada 14 hari terakhir. Model operasional kemudian dilatih pada seluruh riwayat. MAE dan proyeksi harian terlihat pada menu Prediksi AI. Dataset sintetis dikalibrasi untuk skenario kelompok.
-- **Aturan stok** memakai hitungan AVAILABLE, prediksi, cadangan 5, kiriman masuk dari pesanan aktif, dan FEFO. Kandidat memiliki sisa masa simpan 5–14 hari. Transit diasumsikan satu hari. Jumlah rekomendasi dibatasi pemakaian yang diperkirakan sebelum kedaluwarsa dan stok tujuan yang akan habis lebih awal. Validasi ulang dan reservasi terjadi dalam satu transaksi SQLite saat persetujuan akhir.
-- **Blockchain** memakai satu node Hardhat lokal dan satu akun penulis milik backend. Identitas petugas berasal dari sesi aplikasi. Kontrak menyimpan SHA-256 dari payload yang memuat pesanan, tahap, waktu, fasilitas, aktor, jumlah, dan daftar ID. Hash transaksi Ethereum merujuk ke receipt terpisah. Verifikasi membaca log transaksi, receipt, dan nilai kontrak.
-- **Gangguan ledger** meninggalkan peristiwa dengan status tertunda. UDD dapat menekan Coba catat ulang. Kunci pesanan/tahap mencegah pencatatan ganda. Folder data menyimpan SQLite, konfigurasi kontrak, dan jurnal transaksi bertanda tangan. Peluncur memutar kembali transaksi asli jika node dimulai ulang. Simpan folder data sebagai satu kesatuan.
-- **Antarmuka** memakai React, FastAPI dan Bearer JWT dengan sesi fasilitas. Dokumentasi interaktif tersedia di http://127.0.0.1:8000/docs. Operasi stok menerima ID per kantong. Persetujuan membedakan tiga tahap. Pemeriksaan merupakan operasi tambahan pada POST /api/v1/prc-redistribution/inspections. Tiga endpoint notifikasi memakai format ringkas facilityId dan message. Aksi dashboard mengirim pemberitahuan internal. Callback eksternal memerlukan variabel PRC_CALLBACK_KEY yang juga dikirim sebagai header X-Service-Key.
-- Seluruh fasilitas, kondisi persediaan dan hasil pemeriksaan merupakan simulasi akademik. Sistem memakai input ID manual. Integrasi SIMRS/PMI, sensor rantai dingin, evaluasi klinis, tanda tangan dompet per petugas, dan konsensus blockchain lintas instansi berada di luar cakupan. Akun simulasi berbagi sandi awal yang dapat diganti melalui variabel PRC_PASSWORD.
+### Pengujian
 
-## Uji dan penyimpanan
+Hentikan dulu aplikasi agar port Hardhat tersedia. Pengujian memakai basis data sementara dan kontrak baru.
 
-Hentikan demo. Di Windows jalankan:
+```powershell
+.\.venv\Scripts\python.exe start.py --test
+```
 
-    .\.venv\Scripts\python.exe start.py --test
+Di macOS/Linux gunakan `.venv/bin/python start.py --test`. Lihat [hasil uji integrasi](HASIL-UJI.md) untuk skenario dan contoh bukti transaksi.
 
-Pada macOS/Linux gunakan **.venv/bin/python start.py --test**. Pengujian memakai folder sementara dan node Hardhat baru. Terminal menunjukkan status tiap pemeriksaan serta hash tiga transaksi uji. Setiap sesi demo menghasilkan hash masing-masing. Lihat **HASIL-UJI.md** untuk bukti pengujian paket.
+### Jika aplikasi belum terbuka
 
-Untuk memulai sesi baru dan mempertahankan pekerjaan lama, hentikan aplikasi dan ubah nama folder data menjadi data-arsip. Peluncur berikutnya membuat data simulasi baru. Untuk membuka arsip, hentikan aplikasi dan kembalikan folder yang dipilih ke nama data.
+- Baca pesan terakhir di terminal dan pastikan pesan **Uvicorn running on** muncul. Untuk masalah Hardhat, periksa `Get-Content .\data\hardhat.log -Tail 25`.
+- Port default dashboard adalah `8000`. Jika dipakai layanan lain, jalankan `.\.venv\Scripts\python.exe start.py --port 8001`. Port `8545` dipakai Hardhat. Jalankan hanya satu salinan PRC Connect pada satu waktu.
 
-| Berkas | Isi |
-|---|---|
-| fixtures/usage.csv dan forecast.py | Data dan pelatihan model |
-| service.py dan database.py | Persediaan, persetujuan, serah terima dan penyimpanan |
-| app.py | REST API, validasi, sesi dan notifikasi |
-| chain/PRCRedistributionLedger.sol, chain/deploy.cjs dan ledger.py | Kontrak, deployment, pencatatan dan verifikasi |
-| ui.jsx, web/style.css dan web/bundle.js | Sumber antarmuka dan hasil build |
-| tests/demo.py | Uji integrasi dengan kontrak yang berjalan |
+## Batasan prototipe
+
+Prototipe ini memakai fasilitas dan data sintetis, satu jenis komponen dan golongan darah (PRC O+), serta satu node Hardhat lokal. ID kantong dan hasil pemeriksaan dicatat secara manual. Evaluasi model dan pengujian fungsi memakai skenario simulasi. Integrasi SIMRS/PMI, pemindaian kode kantong, identitas petugas per orang, dan jaringan blockchain lintas fasilitas merupakan ruang pengembangan berikutnya.
