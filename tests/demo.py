@@ -9,6 +9,7 @@ from app import app
 from database import DATA, db
 import ledger
 from forecast import FACILITIES, UDD
+from tambah_stok_demo import add_demo_stock
 
 
 def check(label, condition):
@@ -324,6 +325,44 @@ def test_workflow():
                 for e in repeat["events"]
             ),
         )
+
+        added = add_demo_stock()
+        check("Data stok tambahan berhasil dimuat", len(added) == 3)
+        req(
+            "POST",
+            f"/facilities/{dest}/prc-usage",
+            dest,
+            {"bloodBagIds": ["PRC-0001"]},
+        )
+        recent_usage = req("GET", usage_path, dest)
+        stock_reset = "/prc-stock/reset"
+        req("POST", stock_reset, dest, status=403)
+        result = req("POST", stock_reset, UDD)
+        check(
+            "Reset stok memulihkan 73 kantong dan mengosongkan daftar redistribusi",
+            result == {"stockCount": 73, "removedPlans": 1}
+            and not req("GET", "/dashboard", UDD)["plans"],
+        )
+        counts = []
+        for facility in FACILITIES:
+            stock = req("GET", f"/facilities/{facility}/prc-stock", UDD)
+            counts.append(len(stock))
+            check(
+                f"Stok {facility} tersedia tanpa kantong tambahan",
+                all(b["status"] == "AVAILABLE" and int(b["id"][4:]) < 100 for b in stock),
+            )
+        check(
+            "Jumlah stok BDRS dan UDD sesuai kondisi awal",
+            counts == [10, 35, 28]
+            and not req("GET", f"/facilities/{UDD}/prc-stock", UDD),
+        )
+        req("POST", stock_reset, UDD)
+        check(
+            "Riwayat pemakaian dan bukti blockchain bertahan setelah reset stok",
+            req("GET", usage_path, dest) == recent_usage
+            and ledger.rpc("eth_getTransactionReceipt", [repeat["events"][0]["tx"]])["status"] == "0x1",
+        )
+        check("Stok tambahan dapat diimpor kembali setelah reset", len(add_demo_stock()) == 3)
 
 
 if __name__ == "__main__":
