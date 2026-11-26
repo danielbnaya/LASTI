@@ -651,9 +651,20 @@ function Prediction({ data, period, H, user, api, run, busy, reload }) {
     </>
   );
 }
-function Redistribution({ api, user, run, busy, period, data, open, reload }) {
+function Redistribution({
+  api,
+  user,
+  run,
+  busy,
+  period,
+  data,
+  open,
+  reload,
+  M,
+}) {
   const [pairs, A] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => {
     if (preview) document.getElementById("preview-title")?.focus();
@@ -681,6 +692,19 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
       "Usulan " + id + " dibatalkan.",
     );
   }
+  function resetRedistribution() {
+    run(async () => {
+      const result = await api("/prc-redistribution/reset", "POST");
+      setConfirmReset(false);
+      M(
+        `${result.removedPlans} rencana dihapus dari daftar. ` +
+          `${result.restoredBags} kantong dikembalikan ke persediaan asal.`,
+      );
+      await reload();
+      await search();
+    });
+  }
+
   return (
     <>
       {user === U && (
@@ -787,8 +811,43 @@ function Redistribution({ api, user, run, busy, period, data, open, reload }) {
       <section className="card">
         <div className="cardhead">
           <h2>Daftar rencana</h2>
-          <small>{data.plans.length} rencana</small>
+          <div className="row">
+            <small>{data.plans.length} rencana</small>
+            {user === U && data.plans.length > 0 && (
+              <button
+                className="alertbtn"
+                disabled={busy}
+                aria-expanded={confirmReset}
+                onClick={() => setConfirmReset(!confirmReset)}
+              >
+                Reset data redistribusi
+              </button>
+            )}
+          </div>
         </div>
+        {confirmReset && (
+          <div className="notice">
+            <h3>Mulai ulang pengujian redistribusi?</h3>
+            <p>
+              Seluruh usulan, pesanan, dan riwayat redistribusi di aplikasi akan
+              dihapus. Kantong yang terpengaruh dikembalikan ke persediaan
+              awalnya, kecuali yang sudah dipakai atau dicadangkan untuk pasien.
+              Bukti lama tetap tercatat di blockchain.
+            </p>
+            <div className="row space">
+              <button disabled={busy} onClick={() => setConfirmReset(false)}>
+                Kembali ke daftar
+              </button>
+              <button
+                className="alertbtn"
+                disabled={busy}
+                onClick={resetRedistribution}
+              >
+                Ya, reset redistribusi
+              </button>
+            </div>
+          </div>
+        )}
         <Plans
           plans={data.plans}
           open={open}

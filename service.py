@@ -131,6 +131,24 @@ def active_routes(c):
     }
 
 
+def last_plan_number(c):
+    # Format REC-xxxx telah digunakan sebelum nomor terakhir disimpan di settings.
+    return c.execute(
+        """SELECT MAX(
+               COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE name='last_plan_number'), 0),
+               COALESCE((SELECT MAX(CAST(SUBSTR(id, 5) AS INTEGER)) FROM plans), 0)
+           )"""
+    ).fetchone()[0]
+
+
+def save_plan_number(c, number):
+    c.execute(
+        """INSERT INTO settings(name, value) VALUES ('last_plan_number', ?)
+           ON CONFLICT(name) DO UPDATE SET value=excluded.value""",
+        (str(number),),
+    )
+
+
 def create_plan(c, src, dst, h, reviewed_bags=None):
     require(
         src in FACILITIES and dst in FACILITIES and src != dst,
@@ -149,8 +167,9 @@ def create_plan(c, src, dst, h, reviewed_bags=None):
             "Daftar kantong berubah. Klik Cari rekomendasi lagi untuk meninjau daftar terbaru.",
         )
     require(bags, "Tidak ada kantong yang memenuhi seluruh kriteria.")
-    n = c.execute("SELECT COUNT(*) FROM plans").fetchone()[0] + 1
-    key = f"REC-{n:04}"
+    number = last_plan_number(c) + 1
+    save_plan_number(c, number)
+    key = f"REC-{number:04}"
     c.execute(
         "INSERT INTO plans VALUES(?,?,?,?,'SOURCE',NULL,?)",
         (key, src, dst, json.dumps(bags), h),
@@ -173,6 +192,44 @@ def cancel_plan(c, plan):
     c.execute("UPDATE plans SET stage='CANCELLED' WHERE id=?", (plan["id"],))
     for facility in (UDD, plan["src"], plan["dst"]):
         note(c, facility, f"{plan['id']} dibatalkan oleh UDD.")
+
+
+def reset_redistribution(c):
+    removed = c.execute("SELECT COUNT(*) FROM plans").fetchone()[0]
+    if not removed:
+        return {"removedPlans": 0, "restoredBags": 0}
+
+    # Satu kantong bisa berpindah lebih dari sekali. Urutan persetujuan
+    # akhir, termasuk peristiwa yang masih menunggu blockchain, menentukan asal awalnya.
+    origins = {}
+    for row in c.execute(
+        """SELECT p.src, bag.value AS bag_id
+           FROM events AS e
+           JOIN plans AS p ON p.id=e.plan AND e.id=p.orderId || '/APPROVAL'
+           JOIN json_each(p.bags) AS bag
+           ORDER BY e.rowid"""
+    ):
+        origins.setdefault(row["bag_id"], row["src"])
+    restored = 0
+    for bag, facility in origins.items():
+        restored += c.execute(
+            """UPDATE bags SET facility=?, status='AVAILABLE'
+               WHERE id=? AND status NOT IN ('USED', 'PATIENT_RESERVED')
+                 AND (facility<>? OR status<>'AVAILABLE')""",
+            (facility, bag, facility),
+        ).rowcount
+
+    save_plan_number(c, last_plan_number(c))
+    c.execute(
+        """DELETE FROM notes WHERE SUBSTR(message, 1, INSTR(message, ' ') - 1) IN (
+               SELECT id FROM plans UNION SELECT orderId FROM plans
+           )"""
+    )
+    c.execute("DELETE FROM events")
+    c.execute("DELETE FROM decisions")
+    c.execute("DELETE FROM inspections")
+    c.execute("DELETE FROM plans")
+    return {"removedPlans": removed, "restoredBags": restored}
 
 
 def enqueue(c, p, stage, actor, bags):

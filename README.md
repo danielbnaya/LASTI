@@ -63,6 +63,12 @@ Pada **Daftar rencana**, UDD dapat memilih **Batalkan usulan** sebelum ada keput
 
 Angka 25/20/18 dihitung dari CSV oleh model. Perubahan persediaan, pemakaian, dan periode prediksi dapat mengubah rekomendasi.
 
+### Mengulang pengujian redistribusi
+
+Masuk sebagai **UDD-001**, buka **Redistribusi → Daftar rencana → Reset data redistribusi**, lalu pilih **Ya, reset redistribusi**. Daftar rencana aktif dan riwayat redistribusi di aplikasi akan dikosongkan. Kantong yang sudah dipindahkan, dikunci, atau ditahan dalam pengujian kembali ke fasilitas asal dengan status tersedia. Kantong yang sudah dicatat terpakai atau dicadangkan untuk pasien tetap mengikuti catatan persediaan terakhir. Data stok yang ditambahkan sendiri dan riwayat pemakaian tetap tersimpan.
+
+Aplikasi menghitung ulang rekomendasi menggunakan stok setelah reset. Nomor usulan dan pesanan berikutnya melanjutkan urutan sebelumnya untuk menjaga ID transaksi tetap unik. Bukti yang sudah tercatat di blockchain tetap berada di ledger lokal.
+
 ## Stok tambahan untuk uji rekomendasi
 
 Dari PowerShell di folder proyek, jalankan perintah berikut satu kali:

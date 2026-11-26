@@ -25,6 +25,7 @@ from service import (
     metrics,
     note,
     require,
+    reset_redistribution,
     rows,
     selected,
 )
@@ -359,6 +360,13 @@ def proposal(body: Proposal, user: User):
             reviewed,
         )
         return detail(c, getplan(c, key))
+
+
+@api.post("/prc-redistribution/reset")
+def reset_demo(user: User):
+    require(user == UDD, "Reset data redistribusi hanya dapat dilakukan oleh UDD", 403)
+    with db(True) as c:
+        return reset_redistribution(c)
 
 
 @api.post("/prc-redistribution/plans/{plan_id}/cancel")
