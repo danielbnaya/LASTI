@@ -611,6 +611,31 @@ summary {
 .chart i:hover {
   background: var(--pine);
 }
+.accuracy-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+  gap: 10px;
+  margin: 16px 0 0;
+}
+.accuracy-metrics > div {
+  padding: 12px 15px;
+  background: #f4f3e9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.accuracy-metrics dt {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+.accuracy-metrics dd {
+  margin: 0;
+  font-size: 0.86rem;
+}
+.accuracy-metrics dd strong {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
 .login {
   min-height: 100vh;
   min-height: 100dvh;
