@@ -5,11 +5,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
-from app import app
-from database import DATA, db
-import ledger
-from forecast import FACILITIES, UDD
-from tambah_stok_demo import add_demo_stock
+from backend import ledger
+from backend.app import app
+from backend.database import DATA, db
+from backend.forecast import FACILITIES, UDD
+from scripts.tambah_stok_demo import add_demo_stock
 
 
 def check(label, condition):
