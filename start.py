@@ -2,7 +2,7 @@
 
 import argparse, json, os, shutil, socket, subprocess, sys, time
 from pathlib import Path
-import ledger
+from backend import ledger
 
 BASE = Path(__file__).resolve().parent
 os.chdir(BASE)
@@ -74,7 +74,7 @@ def main():
         print("Menyiapkan dashboard. Tunggu pesan 'Uvicorn running on' di bawah.", flush=True)
         import uvicorn
 
-        uvicorn.run("app:app", host="127.0.0.1", port=args.port)
+        uvicorn.run("backend.app:app", host="127.0.0.1", port=args.port)
     finally:
         if child:
             child.terminate()
