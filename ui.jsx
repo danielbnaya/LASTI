@@ -56,6 +56,10 @@ const shortDate = new Intl.DateTimeFormat("id-ID", {
   month: "short",
   timeZone: "UTC",
 });
+const errorNumber = new Intl.NumberFormat("id-ID", {
+  minimumFractionDigits: 3,
+  maximumFractionDigits: 3,
+});
 function Icon({ name }) {
   return (
     <svg
@@ -768,6 +772,12 @@ function Inventory({ user, api, run, reload, nonce, busy, E, M }) {
 function Prediction({ data, period, H, api, run, busy, reload }) {
   const [f, S] = useState(data.facilities[0]);
   const m = data.metrics.find((x) => x.facilityId === f) || data.metrics[0];
+  const evaluation =
+    m.mae === m.baseline
+      ? "Kedua metode mencatat galat yang sama pada data uji."
+      : m.mae < m.baseline
+        ? "Model regresi lebih mendekati pemakaian aktual pada data uji."
+        : "Rata-rata historis lebih mendekati pemakaian aktual pada data uji.";
   const max = Math.max(...m.daily, 1);
   const dates = m.daily.map((_, i) => {
     const day = new Date(data.day);
@@ -864,17 +874,38 @@ function Prediction({ data, period, H, api, run, busy, reload }) {
           kekurangan <b>{m.potentialShortage}</b> kantong
         </div>
       </section>
-      <section className="card">
-        <h2>Evaluasi regresi linear</h2>
-        <p className="space">
-          Latih pada {m.train} hari awal, uji pada {m.test} hari terakhir. MAE
-          model <b>{m.mae}</b> kantong/hari. MAE pembanding rata-rata{" "}
-          <b>{m.baseline}</b>.
+      <section className="card" aria-labelledby="accuracy-title">
+        <h2 id="accuracy-title">Akurasi pada data uji · {m.facilityId}</h2>
+        <p className="muted space">
+          MAE adalah rata-rata selisih absolut antara prediksi dan pemakaian
+          aktual. Semakin kecil nilainya, semakin dekat prediksinya.
         </p>
-        <small>
-          Prediksi operasional memakai model yang dilatih kembali pada seluruh
-          riwayat simulasi.
-        </small>
+        <dl className="accuracy-metrics">
+          <div>
+            <dt>Model regresi</dt>
+            <dd>
+              <strong>{errorNumber.format(m.mae)}</strong> kantong/hari
+            </dd>
+          </div>
+          <div>
+            <dt>Rata-rata historis</dt>
+            <dd>
+              <strong>{errorNumber.format(m.baseline)}</strong> kantong/hari
+            </dd>
+          </div>
+        </dl>
+        <p className="notice">
+          <strong>{evaluation}</strong>
+        </p>
+        <details className="space">
+          <summary>Cara evaluasi</summary>
+          <p className="muted space">
+            Model regresi dan rata-rata historis dihitung dari {m.train} hari
+            awal, lalu diuji pada {m.test} hari terakhir. Grafik prediksi
+            menggunakan model regresi yang dilatih ulang pada seluruh riwayat
+            simulasi.
+          </p>
+        </details>
       </section>
     </>
   );
