@@ -2,8 +2,8 @@
 
 from datetime import timedelta
 
-from database import DATA, EXTRA_STOCK_MARKER, db, init
-from forecast import DAY, FACILITIES
+from backend.database import DATA, EXTRA_STOCK_MARKER, db, init
+from backend.forecast import DAY, FACILITIES
 
 # Stok tujuan ditambah sebagian kecil sebagai AVAILABLE agar masih ada
 # kebutuhan redistribusi. Sisanya menggambarkan stok yang terikat reservasi.

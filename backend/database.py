@@ -2,9 +2,9 @@ import csv, os, sqlite3
 from contextlib import contextmanager
 from datetime import timedelta
 from pathlib import Path
-from forecast import DAY, FACILITIES
+from .forecast import DAY, FACILITIES
 
-BASE = Path(__file__).resolve().parent
+BASE = Path(__file__).resolve().parents[1]
 DATA = Path(os.environ.get("PRC_DATA", BASE / "data"))
 EXTRA_STOCK_MARKER = "redistribution_demo_stock_v1"
 SCHEMA = """

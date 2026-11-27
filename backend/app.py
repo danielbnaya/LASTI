@@ -6,9 +6,9 @@ from datetime import date
 from fastapi import FastAPI, APIRouter, Depends, Header
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-import ledger
-from database import BASE, DATA, EXTRA_STOCK_MARKER, db, init, seed_initial_stock
-from service import (
+from . import ledger
+from .database import BASE, DATA, EXTRA_STOCK_MARKER, db, init, seed_initial_stock
+from .service import (
     DAY,
     FACILITIES,
     UDD,
@@ -507,4 +507,4 @@ def callback(body: Notice, x_service_key: Annotated[str, Header()] = ""):
 
 
 app.include_router(api)
-app.mount("/", StaticFiles(directory=BASE / "web", html=True), name="web")
+app.mount("/", StaticFiles(directory=BASE / "frontend/web", html=True), name="web")

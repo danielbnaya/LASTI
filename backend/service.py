@@ -2,8 +2,8 @@ import json
 from datetime import datetime, timezone, date
 from math import floor
 from fastapi import HTTPException
-from forecast import DAY, FACILITIES, RESERVE, UDD, predict
-from ledger import canonical
+from .forecast import DAY, FACILITIES, RESERVE, UDD, predict
+from .ledger import canonical
 
 
 def now():

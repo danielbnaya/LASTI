@@ -5,7 +5,7 @@
   "scripts": {
     "chain": "hardhat node --hostname 127.0.0.1",
     "deploy": "node chain/deploy.cjs",
-    "build": "esbuild ui.jsx --bundle --minify --outfile=web/bundle.js"
+    "build": "esbuild frontend/ui.jsx --bundle --minify --outfile=frontend/web/bundle.js"
   },
   "devDependencies": {
     "esbuild": "^0.25.12",

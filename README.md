@@ -93,20 +93,22 @@ Data awal berisi 73 kantong PRC O+ dan 60 hari riwayat pemakaian sintetis per BD
 Kedua reset mempertahankan riwayat pemakaian dan bukti yang sudah tercatat di blockchain. Untuk menambah 30 kantong uji per BDRS, jalankan skrip berikut dari PowerShell dan muat ulang aplikasi:
 
 ```powershell
-.\.venv\Scripts\python.exe tambah_stok_demo.py
+.\.venv\Scripts\python.exe -m scripts.tambah_stok_demo
 ```
 
 ## Arsitektur dan pengembangan
 
 | Lokasi | Fungsi |
 | --- | --- |
-| `ui.jsx`, `web/` | Antarmuka React, CSS, dan hasil build |
-| `app.py`, `service.py`, `database.py` | FastAPI, aturan redistribusi, dan penyimpanan SQLite |
-| `forecast.py`, `fixtures/usage.csv` | Model regresi berdasarkan hari dalam minggu dan data sintetis |
-| `chain/`, `ledger.py`, `hardhat.config.cjs` | Kontrak Solidity, node lokal, pencatatan dan verifikasi bukti |
-| `start.py`, `tests/demo.py` | Peluncur aplikasi dan uji integrasi |
+| [`backend/`](backend/) | FastAPI, aturan redistribusi, SQLite, model regresi, dan koneksi ke blockchain |
+| [`frontend/`](frontend/) | Kode React di `ui.jsx` serta HTML, CSS, dan hasil build di `web/` |
+| [`chain/`](chain/) | Smart contract Solidity dan skrip deploy ke Hardhat lokal |
+| [`fixtures/`](fixtures/) | Riwayat pemakaian sintetis untuk inisialisasi database |
+| [`scripts/`](scripts/) | Skrip penambahan stok simulasi |
+| [`tests/`](tests/) | Skenario uji integrasi |
+| [`start.py`](start.py) | Peluncur aplikasi dan uji integrasi |
 
-[Dokumentasi API interaktif](http://127.0.0.1:8000/docs) tersedia saat aplikasi berjalan. Setelah mengubah `ui.jsx`, bangun ulang frontend dengan `npm.cmd run build` di PowerShell atau `npm run build` di macOS/Linux.
+[Dokumentasi API interaktif](http://127.0.0.1:8000/docs) tersedia saat aplikasi berjalan. Setelah mengubah `frontend/ui.jsx`, bangun ulang frontend dari root repo dengan `npm.cmd run build` di PowerShell atau `npm run build` di macOS/Linux.
 
 ### Pengujian
 
@@ -116,7 +118,7 @@ Hentikan dulu aplikasi agar port Hardhat tersedia. Pengujian memakai basis data 
 .\.venv\Scripts\python.exe start.py --test
 ```
 
-Di macOS/Linux gunakan `.venv/bin/python start.py --test`. Lihat [hasil uji integrasi](HASIL-UJI.md) untuk skenario dan contoh bukti transaksi.
+Di macOS/Linux gunakan `.venv/bin/python start.py --test`. Skrip di `tests/demo.py` mencetak status tiap pemeriksaan dan hash transaksi ke terminal.
 
 ### Jika aplikasi belum terbuka
 
